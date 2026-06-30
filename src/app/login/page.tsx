@@ -9,7 +9,7 @@ export default function LoginPage() {
   const { login, usersList } = useTournament();
   
   // Tab roles: 'Admin' | 'Co-Admin' | 'Viewer'
-  const [activeRole, setActiveRole] = useState<'Admin' | 'Co-Admin' | 'Viewer'>('Admin');
+  const [activeRole, setActiveRole] = useState<'Admin' | 'Co-Admin' | 'Viewer'>('Viewer');
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -24,18 +24,13 @@ export default function LoginPage() {
       const viewerUser = usersList.find(u => u.role === 'Viewer');
       const targetEmail = email || viewerUser?.email || 'spectator@senshikarate.com';
       
-      const userObj = usersList.find(u => u.email.toLowerCase() === targetEmail.toLowerCase());
-      if (userObj && userObj.status === 'Suspended') {
-        setError('Your access has been suspended by the Tournament Director.');
-        return;
-      }
-      login('Viewer', targetEmail);
-      window.location.href = '/public';
+      login('Viewer', 'spectator@senshikarate.com');
+      window.location.href = `${basePath}/public`;
       return;
     }
 
     if (!email || !password) {
-      setError('Please fill in all credential fields.');
+      setError('Please enter both email and password.');
       return;
     }
 
@@ -60,7 +55,7 @@ export default function LoginPage() {
 
     // Mock successful authentication for testing
     login(activeRole, userObj.email);
-    window.location.href = '/';
+    window.location.href = `${basePath}/`;
   };
 
   const getRoleHelpText = () => {
@@ -92,9 +87,9 @@ export default function LoginPage() {
         {/* TABS GRID */}
         <div className="grid grid-cols-3 gap-2 bg-[#f1f5f9] dark:bg-[#1f2937] p-1.5 rounded-2xl w-full border border-[#e2e8f0]/40 dark:border-slate-700/50">
           {[
-            { id: 'Admin', label: 'Admin', icon: Shield },
+            { id: 'Viewer', label: 'Viewer', icon: Eye },
             { id: 'Co-Admin', label: 'Co-Admin', icon: Users },
-            { id: 'Viewer', label: 'Viewer', icon: Eye }
+            { id: 'Admin', label: 'Admin', icon: Shield }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeRole === tab.id;
@@ -184,60 +179,63 @@ export default function LoginPage() {
         </form>
 
         {/* OR DIVIDER */}
-        <div className="w-full flex items-center justify-between py-1 shrink-0">
-          <hr className="w-[43%] border-[#e2e8f0] dark:border-slate-800" />
-          <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">or</span>
-          <hr className="w-[43%] border-[#e2e8f0] dark:border-slate-800" />
-        </div>
+        {activeRole !== 'Viewer' && (
+          <div className="w-full flex items-center justify-between py-1 shrink-0">
+            <hr className="w-[43%] border-[#e2e8f0] dark:border-slate-800" />
+            <span className="text-[10px] font-bold text-[#94a3b8] uppercase tracking-wider">or</span>
+            <hr className="w-[43%] border-[#e2e8f0] dark:border-slate-800" />
+          </div>
+        )}
 
         {/* GOOGLE SIGN IN */}
-        <button
-          type="button"
-          onClick={async () => {
-            setError(null);
+        {activeRole !== 'Viewer' && (
+          <button
+            type="button"
+            onClick={async () => {
+              setError(null);
 
-            if (isSupabaseConfigured && supabase) {
-              const { error: oauthError } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                  redirectTo: window.location.origin + '/auth/callback',
-                },
-              });
-              if (oauthError) {
-                setError(oauthError.message);
-              }
-              return;
-            }
-            
-            const targetEmail = email.trim()
-              ? email.trim()
-              : (activeRole === 'Admin' 
-                  ? 'admin@senshikarate.com' 
-                  : activeRole === 'Co-Admin' 
-                    ? 'coadmin@senshikarate.com' 
-                    : 'spectator@senshikarate.com');
-            
-            const userObj = usersList.find(u => u.email.toLowerCase() === targetEmail.toLowerCase());
-            if (userObj) {
-              if (userObj.status === 'Suspended') {
-                setError('Your access has been suspended by the Tournament Director.');
+              if (isSupabaseConfigured && supabase) {
+                const { error: oauthError } = await supabase.auth.signInWithOAuth({
+                  provider: 'google',
+                  options: {
+                    redirectTo: window.location.origin + '/auth/callback',
+                  },
+                });
+                if (oauthError) {
+                  setError(oauthError.message);
+                }
                 return;
               }
-              if (userObj.role !== activeRole) {
-                setError(`Access denied. Your account is registered as a ${userObj.role}, not ${activeRole}.`);
-                return;
+              
+              const targetEmail = email.trim()
+                ? email.trim()
+                : (activeRole === 'Admin' 
+                    ? 'admin@senshikarate.com' 
+                    : activeRole === 'Co-Admin' 
+                      ? 'coadmin@senshikarate.com' 
+                      : 'spectator@senshikarate.com');
+              
+              const userObj = usersList.find(u => u.email.toLowerCase() === targetEmail.toLowerCase());
+              if (userObj) {
+                if (userObj.status === 'Suspended') {
+                  setError('Your access has been suspended by the Tournament Director.');
+                  return;
+                }
+                if (userObj.role !== activeRole) {
+                  setError(`Access denied. Your account is registered as a ${userObj.role}, not ${activeRole}.`);
+                  return;
+                }
+              } else {
+                if (email.trim()) {
+                  setError(`No account found for ${targetEmail}. Please contact the administrator.`);
+                  return;
+                }
               }
-            } else {
-              if (email.trim()) {
-                setError(`No account found for ${targetEmail}. Please contact the administrator.`);
-                return;
-              }
-            }
-            login(activeRole, targetEmail);
-            window.location.href = activeRole === 'Viewer' ? '/public' : '/';
-          }}
-          className="w-full py-3 bg-white dark:bg-[#1f2937] hover:bg-gray-50 dark:hover:bg-[#374151] border border-[#cbd5e1] dark:border-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer text-foreground"
-        >
+              login(activeRole, targetEmail);
+              window.location.href = `${basePath}/`;
+            }}
+            className="w-full py-3 bg-white dark:bg-[#1f2937] hover:bg-gray-50 dark:hover:bg-[#374151] border border-[#cbd5e1] dark:border-slate-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer text-foreground"
+          >
           {/* Google Logo SVG */}
           <svg className="h-4 w-4" viewBox="0 0 24 24">
             <path
@@ -259,6 +257,7 @@ export default function LoginPage() {
           </svg>
           <span>Sign in with Google</span>
         </button>
+        )}
 
         {/* FOOTER LINKS */}
         <div className="w-full flex items-center justify-between text-xs font-bold text-[#1d4ed8] dark:text-blue-400 pt-2 shrink-0">
