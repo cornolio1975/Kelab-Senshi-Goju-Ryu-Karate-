@@ -13,10 +13,10 @@ function LayoutShellContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { isLoggedIn, userRole } = useTournament();
 
-  const isPublicRoute = pathname?.startsWith('/public');
+  const isPublicOrAuthRoute = pathname?.startsWith('/public') || pathname?.startsWith('/auth');
 
-  // If public route, render directly without admin frame
-  if (isPublicRoute) {
+  // If public or auth route, render directly without admin frame
+  if (isPublicOrAuthRoute) {
     return (
       <div className="flex h-screen w-screen overflow-hidden bg-background text-foreground">
         <main className="flex-1 overflow-y-auto bg-background focus:outline-none relative text-foreground">
