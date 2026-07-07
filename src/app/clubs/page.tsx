@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 export default function ClubsPage() {
-  const { refreshKey, triggerRefresh } = useTournament();
+  const { refreshKey, triggerRefresh, canModify } = useTournament();
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -139,13 +139,15 @@ export default function ClubsPage() {
           <p className="text-sm text-muted-foreground">Register dojos, manage locations, and view athlete representations across active teams.</p>
         </div>
 
-        <button
-          onClick={handleOpenAddModal}
-          className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5"
-        >
-          <Plus className="h-4 w-4 text-white" />
-          <span>Add Club Dojo</span>
-        </button>
+        {canModify && (
+          <button
+            onClick={handleOpenAddModal}
+            className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5"
+          >
+            <Plus className="h-4 w-4 text-white" />
+            <span>Add Club Dojo</span>
+          </button>
+        )}
       </div>
 
       {/* Filters Bar */}
@@ -192,10 +194,10 @@ export default function ClubsPage() {
                   <tr>
                     <th className="p-3">Dojo Name</th>
                     <th className="p-3">Location (City, State)</th>
-                    <th className="p-3 text-center">Competitors</th>
-                    <th className="p-3 text-center">Registered Coaches</th>
-                    <th className="p-3 text-center">Active Squads</th>
-                    <th className="p-3 w-28 text-center">Actions</th>
+                    <th className="p-3 text-center font-bold text-foreground">Competitors</th>
+                    <th className="p-3 text-center font-bold text-foreground">Coaches</th>
+                    <th className="p-3 text-center font-bold text-foreground">Squad Teams</th>
+                    {canModify && <th className="p-3 text-center font-bold text-foreground">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -236,24 +238,26 @@ export default function ClubsPage() {
                             <span>{squadCount}</span>
                           </span>
                         </td>
-                        <td className="p-3">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => handleOpenEditModal(club)}
-                              className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded cursor-pointer"
-                              title="Edit Club details"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(club.id)}
-                              className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded cursor-pointer"
-                              title="Delete Club"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </td>
+                        {canModify && (
+                          <td className="p-3">
+                            <div className="flex items-center justify-center gap-2">
+                              <button
+                                onClick={() => handleOpenEditModal(club)}
+                                className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded cursor-pointer"
+                                title="Edit Club details"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(club.id)}
+                                className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded cursor-pointer"
+                                title="Delete Club"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })}

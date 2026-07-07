@@ -15,7 +15,8 @@ export default function SettingsPage() {
     userRole, 
     logoUrl, setLogoUrl,
     usersList, addUser, updateUser, deleteUser,
-    globalAccessibility, setGlobalAccessibility 
+    globalAccessibility, setGlobalAccessibility,
+    canModify
   } = useTournament();
 
   const [localName, setLocalName] = useState(tournamentName);
@@ -36,6 +37,7 @@ export default function SettingsPage() {
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserRole, setNewUserRole] = useState<'Admin' | 'Co-Admin' | 'Viewer'>('Co-Admin');
   const [newUserStatus, setNewUserStatus] = useState<'Active' | 'Suspended'>('Active');
+  const [newUserCanModify, setNewUserCanModify] = useState(false);
   
   // Custom accessibility overrides per user
   const [customizeUserAccessibility, setCustomizeUserAccessibility] = useState(false);
@@ -51,6 +53,7 @@ export default function SettingsPage() {
   const [editUserName, setEditUserName] = useState('');
   const [editUserRole, setEditUserRole] = useState<'Admin' | 'Co-Admin' | 'Viewer'>('Co-Admin');
   const [editUserStatus, setEditUserStatus] = useState<'Active' | 'Suspended'>('Active');
+  const [editUserCanModify, setEditUserCanModify] = useState(false);
   const [editUserAccessibility, setEditUserAccessibility] = useState<AccessibilitySettings>({
     themeContrast: 'standard',
     textScale: 'standard',
@@ -164,6 +167,7 @@ export default function SettingsPage() {
       email: newUserEmail.trim(),
       role: newUserRole,
       status: newUserStatus,
+      canModify: newUserCanModify,
       accessibility: customizeUserAccessibility ? newUserAccessibility : {
         themeContrast: 'standard',
         textScale: 'standard',
@@ -176,6 +180,7 @@ export default function SettingsPage() {
     setNewUserEmail('');
     setNewUserRole('Co-Admin');
     setNewUserStatus('Active');
+    setNewUserCanModify(false);
     setCustomizeUserAccessibility(false);
     setIsAddingUser(false);
     
@@ -187,6 +192,7 @@ export default function SettingsPage() {
     setEditUserName(user.name);
     setEditUserRole(user.role);
     setEditUserStatus(user.status);
+    setEditUserCanModify(user.canModify || false);
     setEditUserAccessibility(user.accessibility || {
       themeContrast: 'standard',
       textScale: 'standard',
@@ -203,6 +209,7 @@ export default function SettingsPage() {
       name: editUserName,
       role: editUserRole,
       status: editUserStatus,
+      canModify: editUserCanModify,
       accessibility: editUserAccessibility
     });
 
@@ -253,7 +260,8 @@ export default function SettingsPage() {
               type="text"
               value={localName}
               onChange={(e) => setLocalName(e.target.value)}
-              className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+              disabled={!canModify}
+              className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary disabled:opacity-50"
               placeholder="e.g. 1st Kelab Senshi Goju-Ryu Championship"
               required
             />
@@ -275,19 +283,21 @@ export default function SettingsPage() {
             <div className="flex-1 space-y-3 w-full">
               <label className="text-xs font-medium text-foreground block">Upload Custom Logo</label>
               <div className="flex flex-wrap items-center gap-3">
-                <label className="px-4 py-2 border border-border hover:bg-secondary rounded-lg text-xs font-bold transition shadow-sm cursor-pointer inline-flex items-center justify-center">
+                <label className={`px-4 py-2 border border-border hover:bg-secondary rounded-lg text-xs font-bold transition shadow-sm cursor-pointer inline-flex items-center justify-center ${!canModify ? 'opacity-50 pointer-events-none' : ''}`}>
                   <span>Choose File</span>
                   <input
                     type="file"
                     accept="image/*"
                     onChange={handleLogoChange}
+                    disabled={!canModify}
                     className="hidden"
                   />
                 </label>
                 <button
                   type="button"
                   onClick={() => setLocalLogo(`${basePath}/logo.jpg`)}
-                  className="px-4 py-2 border border-red-500/20 hover:border-red-500/40 text-red-500 hover:bg-red-500/5 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer"
+                  disabled={!canModify}
+                  className="px-4 py-2 border border-red-500/20 hover:border-red-500/40 text-red-500 hover:bg-red-500/5 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer disabled:opacity-50 disabled:pointer-events-none"
                 >
                   Reset to Default
                 </button>
@@ -310,7 +320,8 @@ export default function SettingsPage() {
               type="url"
               value={localStream}
               onChange={(e) => setLocalStream(e.target.value)}
-              className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+              disabled={!canModify}
+              className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary disabled:opacity-50"
               placeholder="e.g. https://www.youtube.com/embed/live_stream_id"
             />
             <p className="text-[10px] text-muted-foreground">
@@ -339,7 +350,8 @@ export default function SettingsPage() {
                     key={opt.id}
                     type="button"
                     onClick={() => handleAccessibilityChange('themeContrast', opt.id)}
-                    className={`py-2 px-3 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                    disabled={!canModify}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition border cursor-pointer disabled:opacity-50 ${
                       localAccessibility.themeContrast === opt.id
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'bg-secondary hover:bg-secondary/80 text-muted-foreground border-border'
@@ -365,7 +377,8 @@ export default function SettingsPage() {
                     key={opt.id}
                     type="button"
                     onClick={() => handleAccessibilityChange('textScale', opt.id)}
-                    className={`py-2 px-2 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                    disabled={!canModify}
+                    className={`py-2 px-2 rounded-lg text-xs font-bold transition border cursor-pointer disabled:opacity-50 ${
                       localAccessibility.textScale === opt.id
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'bg-secondary hover:bg-secondary/80 text-muted-foreground border-border'
@@ -390,7 +403,8 @@ export default function SettingsPage() {
                     key={opt.label as string}
                     type="button"
                     onClick={() => handleAccessibilityChange('reducedMotion', opt.id)}
-                    className={`py-2 px-3 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                    disabled={!canModify}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition border cursor-pointer disabled:opacity-50 ${
                       localAccessibility.reducedMotion === opt.id
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'bg-secondary hover:bg-secondary/80 text-muted-foreground border-border'
@@ -415,7 +429,8 @@ export default function SettingsPage() {
                     key={opt.id}
                     type="button"
                     onClick={() => handleAccessibilityChange('legibilityFont', opt.id)}
-                    className={`py-2 px-3 rounded-lg text-xs font-bold transition border cursor-pointer ${
+                    disabled={!canModify}
+                    className={`py-2 px-3 rounded-lg text-xs font-bold transition border cursor-pointer disabled:opacity-50 ${
                       localAccessibility.legibilityFont === opt.id
                         ? 'bg-primary text-primary-foreground border-primary'
                         : 'bg-secondary hover:bg-secondary/80 text-muted-foreground border-border'
@@ -434,7 +449,7 @@ export default function SettingsPage() {
         <div className="flex justify-end">
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || !canModify}
             className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 disabled:opacity-50 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5"
           >
             <Save className="h-4 w-4 text-white" />
@@ -483,7 +498,7 @@ export default function SettingsPage() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-muted-foreground block">Name</label>
                 <input
@@ -515,6 +530,18 @@ export default function SettingsPage() {
                 >
                   <option value="Active">Active</option>
                   <option value="Suspended">Suspended</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-muted-foreground block">Write Permission</label>
+                <select
+                  value={String(editUserCanModify)}
+                  onChange={(e) => setEditUserCanModify(e.target.value === 'true')}
+                  disabled={editingUserEmail === 'admin@senshikarate.com'}
+                  className="w-full px-3 py-2 bg-card border border-border rounded-lg text-xs focus:outline-none text-foreground dark:bg-neutral-800 disabled:opacity-50"
+                >
+                  <option value="false">Read-Only (Spectator)</option>
+                  <option value="true">Allowed (Modify)</option>
                 </select>
               </div>
             </div>
@@ -607,7 +634,7 @@ export default function SettingsPage() {
               </button>
             </div>
             
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-4">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-muted-foreground block">Full Name</label>
                 <input
@@ -651,6 +678,17 @@ export default function SettingsPage() {
                 >
                   <option value="Active">Active</option>
                   <option value="Suspended">Suspended</option>
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-muted-foreground block">Write Permission</label>
+                <select
+                  value={String(newUserCanModify)}
+                  onChange={(e) => setNewUserCanModify(e.target.value === 'true')}
+                  className="w-full px-3 py-2 bg-card border border-border rounded-lg text-xs focus:outline-none text-foreground dark:bg-neutral-800"
+                >
+                  <option value="false">Read-Only (Spectator)</option>
+                  <option value="true">Allowed (Modify)</option>
                 </select>
               </div>
             </div>
@@ -745,6 +783,7 @@ export default function SettingsPage() {
                 <th className="py-3 px-4">User Details</th>
                 <th className="py-3 px-4">System Role</th>
                 <th className="py-3 px-4">Access Status</th>
+                <th className="py-3 px-4">Write Access</th>
                 <th className="py-3 px-4">Accessibility Preferences</th>
                 {!isCoAdmin && <th className="py-3 px-4 text-right">Actions</th>}
               </tr>
@@ -793,6 +832,16 @@ export default function SettingsPage() {
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'Active' ? 'bg-emerald-500' : 'bg-red-500'}`} />
                         {user.status}
+                      </span>
+                    </td>
+
+                    <td className="py-3 px-4">
+                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
+                        user.canModify || user.role === 'Admin'
+                          ? 'bg-emerald-500/5 text-emerald-500 border-emerald-500/20'
+                          : 'bg-neutral-500/5 text-muted-foreground border-border'
+                      }`}>
+                        {user.canModify || user.role === 'Admin' ? 'Read & Write' : 'Read-Only'}
                       </span>
                     </td>
 

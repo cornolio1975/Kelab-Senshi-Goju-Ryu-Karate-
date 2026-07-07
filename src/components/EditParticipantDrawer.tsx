@@ -17,7 +17,7 @@ interface EditParticipantDrawerProps {
 type TabType = 'personal' | 'tournament' | 'category' | 'medical' | 'payment' | 'documents' | 'history';
 
 export default function EditParticipantDrawer({ participantId, onClose }: EditParticipantDrawerProps) {
-  const { triggerRefresh } = useTournament();
+  const { triggerRefresh, canModify } = useTournament();
   
   const [activeTab, setActiveTab] = useState<TabType>('personal');
   const [loading, setLoading] = useState(true);
@@ -726,37 +726,39 @@ export default function EditParticipantDrawer({ participantId, onClose }: EditPa
                 </h4>
 
                 {/* Upload Form */}
-                <div className="bg-secondary/20 border border-border p-4 rounded-xl flex gap-3 items-end">
-                  <div className="flex-1">
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Document Label</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Passport Scan, Liability Waiver"
-                      value={newDocName}
-                      onChange={(e) => setNewDocName(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-secondary border border-border rounded-lg text-xs text-foreground focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Category</label>
-                    <select
-                      value={newDocType}
-                      onChange={(e) => setNewDocType(e.target.value)}
-                      className="px-3 py-1.5 bg-secondary border border-border rounded-lg text-xs text-foreground focus:outline-none"
+                {canModify && (
+                  <div className="bg-secondary/20 border border-border p-4 rounded-xl flex gap-3 items-end">
+                    <div className="flex-1">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Document Label</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Passport Scan, Liability Waiver"
+                        value={newDocName}
+                        onChange={(e) => setNewDocName(e.target.value)}
+                        className="w-full px-3 py-1.5 bg-secondary border border-border rounded-lg text-xs text-foreground focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider block mb-1">Category</label>
+                      <select
+                        value={newDocType}
+                        onChange={(e) => setNewDocType(e.target.value)}
+                        className="px-3 py-1.5 bg-secondary border border-border rounded-lg text-xs text-foreground focus:outline-none"
+                      >
+                        <option value="Identity">Identity</option>
+                        <option value="Medical">Medical Clearance</option>
+                        <option value="Waiver">Liability Waiver</option>
+                      </select>
+                    </div>
+                    <button
+                      onClick={handleDocumentUpload}
+                      disabled={!newDocName}
+                      className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-semibold rounded-lg shadow-sm cursor-pointer disabled:opacity-50"
                     >
-                      <option value="Identity">Identity</option>
-                      <option value="Medical">Medical Clearance</option>
-                      <option value="Waiver">Liability Waiver</option>
-                    </select>
+                      Simulate Attach
+                    </button>
                   </div>
-                  <button
-                    onClick={handleDocumentUpload}
-                    disabled={!newDocName}
-                    className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-semibold rounded-lg shadow-sm cursor-pointer disabled:opacity-50"
-                  >
-                    Simulate Attach
-                  </button>
-                </div>
+                )}
 
                 {/* Documents List */}
                 <div className="space-y-2">
@@ -772,13 +774,15 @@ export default function EditParticipantDrawer({ participantId, onClose }: EditPa
                             <span className="text-[10px] text-muted-foreground block">{d.doc_type}</span>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleDocumentDelete(d.id)}
-                          className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg cursor-pointer"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        {canModify && (
+                          <button
+                            type="button"
+                            onClick={() => handleDocumentDelete(d.id)}
+                            className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg cursor-pointer"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
                       </div>
                     ))
                   )}
@@ -848,9 +852,10 @@ export default function EditParticipantDrawer({ participantId, onClose }: EditPa
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 bg-primary text-primary-foreground hover:bg-primary/95 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer"
+                disabled={!canModify}
+                className="px-5 py-2 bg-primary text-primary-foreground hover:bg-primary/95 disabled:bg-neutral-500/20 disabled:text-muted-foreground disabled:cursor-not-allowed rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 transition"
               >
-                <Save className="h-4 w-4" /> Save Record Edits
+                <Save className="h-4 w-4" /> <span>{canModify ? 'Save Record Edits' : 'Read-Only Mode'}</span>
               </button>
             </div>
 

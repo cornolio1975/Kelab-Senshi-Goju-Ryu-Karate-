@@ -95,7 +95,7 @@ export default function LoginPage() {
               emailRedirectTo: window.location.origin + basePath + '/auth/callback',
               data: {
                 name: name.trim(),
-                role: activeRole,
+                role: 'Viewer',
               }
             }
           });
@@ -106,12 +106,13 @@ export default function LoginPage() {
             return;
           }
 
-          // Register user locally
+          // Register user locally as Viewer (Spectator) with no write access
           const newUser = {
             name: name.trim(),
             email: email.trim(),
-            role: activeRole,
+            role: 'Viewer' as const,
             status: 'Active' as const,
+            canModify: false,
             accessibility: {
               themeContrast: 'standard' as const,
               textScale: 'standard' as const,
@@ -122,18 +123,19 @@ export default function LoginPage() {
           addUser(newUser);
 
           if (data.session) {
-            login(activeRole, email.trim());
-            window.location.href = `${basePath}/`;
+            login('Viewer', email.trim());
+            window.location.href = `${basePath}/public`;
           } else {
             setMessage('Registration successful! Please check your email to confirm your account.');
           }
         } else {
-          // Mock Sign Up
+          // Mock Sign Up as Viewer
           const newUser = {
             name: name.trim(),
             email: email.trim(),
-            role: activeRole,
+            role: 'Viewer' as const,
             status: 'Active' as const,
+            canModify: false,
             accessibility: {
               themeContrast: 'standard' as const,
               textScale: 'standard' as const,
@@ -142,8 +144,8 @@ export default function LoginPage() {
             }
           };
           addUser(newUser);
-          login(activeRole, email.trim());
-          window.location.href = `${basePath}/`;
+          login('Viewer', email.trim());
+          window.location.href = `${basePath}/public`;
         }
         setLoading(false);
         return;
@@ -173,12 +175,14 @@ export default function LoginPage() {
         let matchedUser = usersList.find(u => u.email.toLowerCase() === userEmail.toLowerCase());
         if (!matchedUser) {
           const displayName = data.user?.user_metadata?.name || userEmail.split('@')[0];
-          const userRoleMetadata = data.user?.user_metadata?.role || activeRole;
+          // Use the role the user selected on the login page (not metadata), so Admin logins work correctly
+          const assignedRole = activeRole;
           const newUser = {
             name: displayName,
             email: userEmail,
-            role: userRoleMetadata as 'Admin' | 'Co-Admin' | 'Viewer',
+            role: assignedRole,
             status: 'Active' as const,
+            canModify: assignedRole === 'Admin' || assignedRole === 'Co-Admin',
             accessibility: {
               themeContrast: 'standard' as const,
               textScale: 'standard' as const,

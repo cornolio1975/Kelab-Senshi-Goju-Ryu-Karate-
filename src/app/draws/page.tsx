@@ -1,16 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTournament } from '@/context/TournamentContext';
 import { db } from '@/db/dbClient';
 import { Participant, Category, Bout, Club } from '@/db/types';
 import { 
   GitPullRequest, Check, Trophy, Trash2, Edit2, Play, 
-  ChevronRight, ArrowRight, Award, Plus, Sparkles, RefreshCw, X
+  ChevronRight, ArrowRight, Award, Plus, Sparkles, RefreshCw, X, Printer
 } from 'lucide-react';
+import { SportdataBracket } from '@/components/SportdataBracket';
+
 
 export default function DrawsPage() {
-  const { searchQuery, triggerRefresh } = useTournament();
+  const { searchQuery, triggerRefresh, canModify, tournamentName } = useTournament();
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -35,6 +37,21 @@ export default function DrawsPage() {
   const [scoreA, setScoreA] = useState<number>(0);
   const [scoreB, setScoreB] = useState<number>(0);
   const [chosenWinnerId, setChosenWinnerId] = useState<string>('');
+
+  // Print state
+  const [printMode, setPrintMode] = useState<'current' | 'all'>('all');
+  const [printTarget, setPrintTarget] = useState<'current' | 'all'>('all');
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  useEffect(() => {
+    if (isPrinting) {
+      const timer = setTimeout(() => {
+        window.print();
+        setIsPrinting(false);
+      }, 350);
+      return () => clearTimeout(timer);
+    }
+  }, [isPrinting]);
 
   useEffect(() => {
     setMounted(true);
@@ -117,6 +134,53 @@ export default function DrawsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // --- Print handlers ---
+  const handlePrint = () => {
+    setPrintTarget('all');
+    setIsPrinting(true);
+  };
+
+  const handlePrintCurrent = () => {
+    setPrintTarget('current');
+    setIsPrinting(true);
+  };
+
+  // Helper: group bouts by rounds for a given category's bouts
+  const getBoutsByRoundsForCat = (catBouts: Bout[]) => {
+    const rounds: { [key: number]: Bout[] } = {};
+    catBouts.forEach(b => {
+      if (b.round_no === 99) return;
+      if (!rounds[b.round_no]) rounds[b.round_no] = [];
+      rounds[b.round_no].push(b);
+    });
+    Object.keys(rounds).forEach(r => rounds[Number(r)].sort((a, b) => a.bout_no - b.bout_no));
+    return rounds;
+  };
+
+  // Helper: detect round-robin for a category
+  const isRoundRobinForCat = (catBouts: Bout[]) => {
+    if (catBouts.length === 0) return false;
+    const allRound1 = catBouts.every(b => b.round_no === 1);
+    const hasMultiRound = catBouts.some(b => b.round_no > 1);
+    return allRound1 && !hasMultiRound && catBouts.length > 1;
+  };
+
+  // Render a print competitor row
+  const renderPrintCompetitor = (partId: string | null, score: number, isWinner: boolean, dotClass: string) => {
+    const comp = partId ? participants.find(p => p.id === partId) : null;
+    const club = comp ? clubs.find(c => c.id === comp.club_id) : null;
+    return (
+      <div className="print-competitor">
+        <span className={`print-dot ${dotClass}`} />
+        <span className={`print-comp-name${isWinner ? ' winner' : ''}`}>
+          {comp ? comp.full_name : 'TBD'}
+          {club ? ` (${club.name})` : ''}
+        </span>
+        <span className="print-comp-score">{partId ? score : '-'}</span>
+      </div>
+    );
   };
 
   // Clear Draws Trigger
@@ -216,7 +280,8 @@ export default function DrawsPage() {
   };
 
   return (
-    <div className="flex h-[calc(100vh-64px)] w-full overflow-hidden text-foreground bg-background">
+    <>
+    <div className="flex h-[calc(100vh-64px)] w-full overflow-hidden text-foreground bg-background no-print">
       
       {/* ======================================================== */}
       {/* LEFT COLUMN: CATEGORY NAVIGATION PANEL                   */}
@@ -311,6 +376,17 @@ export default function DrawsPage() {
             <h2 className="text-xl font-extrabold tracking-tight">Generate Draws</h2>
             <p className="text-xs text-muted-foreground">Configure knockout brackets or round-robin tables for categories.</p>
           </div>
+          {/* Print button — always visible when any category has bouts */}
+          {bouts.length > 0 && (
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer no-print"
+              title="Print all categories draw sheets"
+            >
+              <Printer className="h-4 w-4" />
+              <span>Print All Categories</span>
+            </button>
+          )}
         </div>
 
         {currentCategory ? (
@@ -360,9 +436,9 @@ export default function DrawsPage() {
                 )}
               </div>
 
-              {/* Draw generation buttons */}
-              <div className="flex items-center gap-2 shrink-0">
-                {categoryBouts.length > 0 && (
+              {/* Draw generation + print buttons */}
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                {canModify && categoryBouts.length > 0 && (
                   <button
                     onClick={handleClearDraw}
                     disabled={loading}
@@ -372,14 +448,27 @@ export default function DrawsPage() {
                     <span>Clear Draw</span>
                   </button>
                 )}
-                <button
-                  onClick={handleGenerateDraw}
-                  disabled={loading}
-                  className="px-5 py-2.5 bg-primary text-primary-foreground hover:bg-primary/95 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                >
-                  <Sparkles className="h-4 w-4 text-white" />
-                  <span>{categoryBouts.length > 0 ? 'Regenerate Draw' : 'Generate Draw Sheet'}</span>
-                </button>
+                {canModify && (
+                  <button
+                    onClick={handleGenerateDraw}
+                    disabled={loading}
+                    className="px-5 py-2.5 bg-primary text-primary-foreground hover:bg-primary/95 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                  >
+                    <Sparkles className="h-4.5 w-4.5 text-white" />
+                    <span>{categoryBouts.length > 0 ? 'Regenerate Draw' : 'Generate Draw Sheet'}</span>
+                  </button>
+                )}
+                {categoryBouts.length > 0 && (
+                  <button
+                    onClick={handlePrintCurrent}
+                    disabled={loading}
+                    className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5 disabled:opacity-50 no-print"
+                    title="Print this bracket"
+                  >
+                    <Printer className="h-4 w-4" />
+                    <span>Print Bracket</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -440,7 +529,7 @@ export default function DrawsPage() {
                               <td className="p-3 text-center">
                                 <button
                                   onClick={() => openResolveDialog(b)}
-                                  disabled={!b.participant_a_id || !b.participant_b_id}
+                                  disabled={!b.participant_a_id || !b.participant_b_id || !canModify}
                                   className="px-2.5 py-1 bg-primary text-primary-foreground hover:bg-primary/95 text-[10px] font-bold rounded-md disabled:opacity-40 cursor-pointer"
                                 >
                                   Resolve
@@ -455,100 +544,17 @@ export default function DrawsPage() {
                 </div>
 
               ) : (
-                
-                // SINGLE ELIMINATION TOURNAMENT BRACKET TREE
-                <div className="flex-1 overflow-auto p-6 flex items-start gap-12 select-none min-h-[400px]">
-                  {Object.keys(roundsData).sort((a,b)=>Number(a)-Number(b)).map((roundKey) => {
-                    const roundNo = Number(roundKey);
-                    const roundMatches = roundsData[roundNo];
-                    
-                    let roundTitle = `Round ${roundNo}`;
-                    if (roundMatches.length === 1) roundTitle = 'Final Match';
-                    else if (roundMatches.length === 2) roundTitle = 'Semi-finals';
-                    else if (roundMatches.length === 4) roundTitle = 'Quarter-finals';
-                    else if (roundMatches.length === 8) roundTitle = 'Round of 16';
-
-                    return (
-                      <div key={roundNo} className="flex flex-col gap-8 w-64 shrink-0 h-full justify-center">
-                        <div className="text-center font-bold text-[10px] text-muted-foreground uppercase tracking-wider border-b border-border pb-2">
-                          {roundTitle} ({roundMatches.length} Bouts)
-                        </div>
-                        
-                        <div className="flex-1 flex flex-col justify-around gap-6 py-4">
-                          {roundMatches.map((bout) => {
-                            const isResolved = bout.status === 'Completed' || bout.status === 'Walkover';
-                            const hasCompetitors = bout.participant_a_id && bout.participant_b_id;
-
-                            return (
-                              <div
-                                key={bout.id}
-                                onClick={() => openResolveDialog(bout)}
-                                className={`border rounded-lg bg-card overflow-hidden shadow-xs transition-all ${
-                                  hasCompetitors 
-                                    ? 'border-border cursor-pointer hover:border-primary/50 hover:shadow-sm' 
-                                    : 'border-border/40 opacity-75'
-                                }`}
-                              >
-                                <div className="bg-secondary/30 px-2 py-1 text-[9px] font-mono text-muted-foreground flex justify-between border-b border-border">
-                                  <span>Bout {bout.bout_no}</span>
-                                  <span>{bout.tatami}</span>
-                                </div>
-                                
-                                <div className="divide-y divide-border/60">
-                                  {renderCompetitorRow(
-                                    bout.participant_a_id, 
-                                    bout.score_a, 
-                                    isResolved && bout.winner_id === bout.participant_a_id,
-                                    'bg-red-500'
-                                  )}
-                                  {renderCompetitorRow(
-                                    bout.participant_b_id, 
-                                    bout.score_b, 
-                                    isResolved && bout.winner_id === bout.participant_b_id,
-                                    'bg-blue-500'
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {/* Bronze / 3rd Place Match */}
-                  {thirdPlaceMatch && (
-                    <div className="flex flex-col gap-8 w-64 shrink-0 h-full justify-center border-l border-border pl-6">
-                      <div className="text-center font-bold text-[10px] text-muted-foreground uppercase tracking-wider border-b border-border pb-2">
-                        Bronze Medal Match
-                      </div>
-                      <div className="flex-1 flex flex-col justify-center py-4">
-                        <div
-                          onClick={() => openResolveDialog(thirdPlaceMatch)}
-                          className="border border-amber-500/30 rounded-lg bg-amber-500/5 overflow-hidden shadow-xs cursor-pointer hover:border-amber-500 transition-all"
-                        >
-                          <div className="bg-amber-500/10 px-2 py-1 text-[9px] font-mono text-amber-600 dark:text-amber-400 flex justify-between border-b border-amber-500/20">
-                            <span>Bout 3rd Place</span>
-                            <span>Bronze Bracket</span>
-                          </div>
-                          <div className="divide-y divide-border/60">
-                            {renderCompetitorRow(
-                              thirdPlaceMatch.participant_a_id,
-                              thirdPlaceMatch.score_a,
-                              thirdPlaceMatch.status === 'Completed' && thirdPlaceMatch.winner_id === thirdPlaceMatch.participant_a_id,
-                              'bg-amber-500'
-                            )}
-                            {renderCompetitorRow(
-                              thirdPlaceMatch.participant_b_id,
-                              thirdPlaceMatch.score_b,
-                              thirdPlaceMatch.status === 'Completed' && thirdPlaceMatch.winner_id === thirdPlaceMatch.participant_b_id,
-                              'bg-amber-400'
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                <div className="flex-1 overflow-auto p-4 bg-gray-50/20 dark:bg-gray-950/20">
+                  <SportdataBracket
+                    bouts={bouts}
+                    participants={participants}
+                    clubs={clubs}
+                    categories={categories}
+                    selectedCatId={selectedCatId}
+                    canModify={canModify}
+                    onBoutClick={openResolveDialog}
+                    theme="light"
+                  />
                 </div>
               )}
 
@@ -660,5 +666,105 @@ export default function DrawsPage() {
       )}
 
     </div>
+
+    {/* ======================================================= */}
+    {/* HIDDEN PRINT AREA — rendered for @media print only      */}
+    {/* ======================================================= */}
+    <div id="draw-print-area" className="hidden print:block">
+      {/* Print Header */}
+      <div className="print-header">
+        <div>
+          <h1>{tournamentName}</h1>
+          <p>
+            {printTarget === 'current' && currentCategory
+              ? `Draw Sheet — ${currentCategory.name}`
+              : 'Official Draw Sheets — All Categories'}
+          </p>
+        </div>
+        <div className="print-meta">
+          <div>Printed: {new Date().toLocaleDateString('en-MY', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+          <div style={{ fontWeight: 700 }}>CONFIDENTIAL — TOURNAMENT USE ONLY</div>
+        </div>
+      </div>
+
+      {/* One page per category — filtered by printTarget */}
+      {categories
+        .filter(cat => printTarget === 'current' ? cat.id === selectedCatId : true)
+        .map(cat => {
+        const catBouts = bouts.filter(b => b.category_id === cat.id);
+        if (catBouts.length === 0) return null;
+
+        const isRR = isRoundRobinForCat(catBouts);
+        const roundsMap = getBoutsByRoundsForCat(catBouts);
+        const bronze = catBouts.find(b => b.round_no === 99);
+        const totalAthletes = participantCategories.filter(m => m.category_id === cat.id).length;
+
+        return (
+          <div key={cat.id} className="print-category-block">
+            <div className="print-category-title">{cat.name}</div>
+            <div className="print-category-meta">
+              {cat.gender} · {isRR ? 'Round-Robin' : 'Single Elimination'} · {totalAthletes} Athletes
+              {bronze ? ' · Bronze Medal Match included' : ''}
+            </div>
+
+            {isRR ? (
+              /* Round-Robin Table */
+              <table className="print-rr-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '40pt' }}>Bout</th>
+                    <th>Aka (Red)</th>
+                    <th style={{ width: '40pt', textAlign: 'center' }}>Score</th>
+                    <th>Ao (Blue)</th>
+                    <th style={{ width: '60pt', textAlign: 'center' }}>Status</th>
+                    <th style={{ width: '80pt' }}>Winner</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {catBouts.sort((a, b) => a.bout_no - b.bout_no).map(bout => {
+                    const compA = participants.find(p => p.id === bout.participant_a_id);
+                    const compB = participants.find(p => p.id === bout.participant_b_id);
+                    const winner = participants.find(p => p.id === bout.winner_id);
+                    return (
+                      <tr key={bout.id}>
+                        <td style={{ fontFamily: 'monospace', textAlign: 'center' }}>{bout.bout_no}</td>
+                        <td style={{ fontWeight: 600 }}>{compA?.full_name || 'TBD'}</td>
+                        <td style={{ fontFamily: 'monospace', fontWeight: 700, textAlign: 'center' }}>{bout.score_a} – {bout.score_b}</td>
+                        <td style={{ fontWeight: 600 }}>{compB?.full_name || 'TBD'}</td>
+                        <td style={{ textAlign: 'center' }}>{bout.status}</td>
+                        <td style={{ fontWeight: 700 }}>{winner?.full_name || '—'}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            ) : (
+              /* Elimination Bracket */
+              <div className="print-bracket-wrapper" style={{ width: '1120px', height: '600px', marginTop: '10px', position: 'relative' }}>
+                <SportdataBracket
+                  bouts={catBouts}
+                  participants={participants}
+                  clubs={clubs}
+                  categories={categories}
+                  selectedCatId={cat.id}
+                  canModify={false}
+                  theme="light"
+                  height="520px"
+                />
+              </div>
+            )}
+
+            {/* Signature block */}
+            <div className="print-signatures">
+              <div className="print-sig-box"><div className="print-sig-line" /><div>Draw Officer Signature</div></div>
+              <div className="print-sig-box"><div className="print-sig-line" /><div>Tournament Director</div></div>
+              <div className="print-sig-box"><div className="print-sig-line" /><div>Verified By</div></div>
+              <div className="print-sig-box"><div className="print-sig-line" /><div>Date &amp; Stamp</div></div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+    </>
   );
 }

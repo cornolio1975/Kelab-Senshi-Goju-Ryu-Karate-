@@ -539,6 +539,11 @@ export const mockStore = {
       saveStoreData('ts_categories', list);
       return newCat;
     },
+    delete: (id: string): void => {
+      const list = getStoreData('ts_categories', SEED_CATEGORIES);
+      const filtered = list.filter(c => c.id !== id);
+      saveStoreData('ts_categories', filtered);
+    },
     merge: (catIds: string[], mergedName: string): Category => {
       const list = getStoreData('ts_categories', SEED_CATEGORIES);
       const selected = list.filter(c => catIds.includes(c.id));
@@ -1040,12 +1045,21 @@ export const mockStore = {
       const filtered = list.filter(b => b.category_id !== catId);
       saveStoreData('ts_bouts', filtered);
     },
-    generateDraw: (catId: string, drawType: 'Elimination' | 'Round-robin', hasThirdPlace: boolean): Bout[] => {
-      const mappings = getStoreData<ParticipantCategory>('ts_participant_categories', SEED_PARTICIPANT_CATEGORIES);
-      const athleteIds = mappings.filter(m => m.category_id === catId).map(m => m.participant_id);
-      
-      const participants = getStoreData<Participant>('ts_participants', SEED_PARTICIPANTS);
-      const athletes = participants.filter(p => athleteIds.includes(p.id) && !p.deleted_at && p.status !== 'Cancelled');
+    saveBouts: (catId: string, newBouts: Bout[]): void => {
+      const list = getStoreData<Bout>('ts_bouts', []).filter(b => b.category_id !== catId);
+      saveStoreData('ts_bouts', [...list, ...newBouts]);
+    },
+    generateDraw: (catId: string, drawType: 'Elimination' | 'Round-robin', hasThirdPlace: boolean, passedAthletes?: Participant[]): Bout[] => {
+      console.log('[mockStore.generateDraw] catId:', catId, 'passedAthletes count:', passedAthletes?.length);
+      let athletes = passedAthletes;
+      if (!athletes) {
+        const mappings = getStoreData<ParticipantCategory>('ts_participant_categories', SEED_PARTICIPANT_CATEGORIES);
+        const athleteIds = mappings.filter(m => m.category_id === catId).map(m => m.participant_id);
+        console.log('[mockStore.generateDraw] fallback to local storage. mappings for category:', athleteIds.length);
+        const participants = getStoreData<Participant>('ts_participants', SEED_PARTICIPANTS);
+        athletes = participants.filter(p => athleteIds.includes(p.id) && !p.deleted_at && p.status !== 'Cancelled');
+        console.log('[mockStore.generateDraw] fallback local active athletes filtered:', athletes.length);
+      }
 
       if (athletes.length === 0) {
         throw new Error('Cannot generate draws: No active participants in this category.');

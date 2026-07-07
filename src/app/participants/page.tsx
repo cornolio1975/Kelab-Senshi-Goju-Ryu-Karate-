@@ -21,7 +21,8 @@ export default function ParticipantsPage() {
     isAddOpen,
     setIsAddOpen,
     refreshKey,
-    triggerRefresh
+    triggerRefresh,
+    canModify
   } = useTournament();
 
   const [mounted, setMounted] = useState(false);
@@ -345,13 +346,15 @@ export default function ParticipantsPage() {
             <h2 className="text-xl font-extrabold tracking-tight">Participants</h2>
             <p className="text-xs text-muted-foreground">Manage status, search school/club squads, and verify weights.</p>
           </div>
-          <button
-            onClick={() => setIsAddOpen(true)}
-            className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer"
-          >
-            <Plus className="h-4.5 w-4.5" />
-            <span>Add Participant</span>
-          </button>
+          {canModify && (
+            <button
+              onClick={() => setIsAddOpen(true)}
+              className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 rounded-lg text-xs font-bold shadow-sm flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="h-4.5 w-4.5" />
+              <span>Add Participant</span>
+            </button>
+          )}
         </div>
 
         {/* Filters Panel (KumiteTechnology demo structure) */}
@@ -443,28 +446,30 @@ export default function ParticipantsPage() {
 
         {/* Action Button toolbar (KumiteTechnology demo style) */}
         <div className="flex flex-wrap items-center justify-between gap-3 bg-secondary/20 border border-border px-4 py-2.5 rounded-xl shrink-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={handleActivateAll}
-              disabled={filteredParticipants.length === 0}
-              className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer disabled:opacity-50"
-            >
-              <Check className="h-4 w-4" /> Activate All
-            </button>
-            <button
-              onClick={handleDeactivateAll}
-              disabled={filteredParticipants.length === 0}
-              className="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15 text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer disabled:opacity-50"
-            >
-              <X className="h-4 w-4" /> Deactivate All
-            </button>
-            <button
-              onClick={() => alert('Recalculating physical index coefficients (weight/height) for seed rankings.')}
-              className="px-3 py-1.5 bg-card hover:bg-secondary text-muted-foreground hover:text-foreground border border-border text-xs font-medium rounded-lg cursor-pointer"
-            >
-              Setup Physical Indexes
-            </button>
-          </div>
+          {canModify && (
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleActivateAll}
+                disabled={filteredParticipants.length === 0}
+                className="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              >
+                <Check className="h-4 w-4" /> Activate All
+              </button>
+              <button
+                onClick={handleDeactivateAll}
+                disabled={filteredParticipants.length === 0}
+                className="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15 text-xs font-semibold rounded-lg flex items-center gap-1 cursor-pointer disabled:opacity-50"
+              >
+                <X className="h-4 w-4" /> Deactivate All
+              </button>
+              <button
+                onClick={() => alert('Recalculating physical index coefficients (weight/height) for seed rankings.')}
+                className="px-3 py-1.5 bg-card hover:bg-secondary text-muted-foreground hover:text-foreground border border-border text-xs font-medium rounded-lg cursor-pointer"
+              >
+                Setup Physical Indexes
+              </button>
+            </div>
+          )}
 
           <button
             onClick={handleExportCSV}
@@ -501,7 +506,7 @@ export default function ParticipantsPage() {
                   <th className="p-3 w-16 font-bold text-muted-foreground">Age</th>
                   <th className="p-3 w-20 font-bold text-muted-foreground">Weight</th>
                   <th className="p-3 w-36 font-bold text-muted-foreground">School / Club</th>
-                  <th className="p-3 w-24 font-bold text-muted-foreground text-center">Actions</th>
+                  {canModify && <th className="p-3 w-24 font-bold text-muted-foreground text-center">Actions</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
@@ -577,30 +582,32 @@ export default function ParticipantsPage() {
                         <td className="p-3 text-muted-foreground font-semibold font-mono">{getAge(p.dob)}</td>
                         <td className="p-3 text-muted-foreground font-mono">{p.weight} kg</td>
                         <td className="p-3 text-muted-foreground font-semibold truncate max-w-[130px]">{clubName}</td>
-                        <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-center gap-1.5">
-                            <button
-                              onClick={() => setSelectedPartId(p.id)}
-                              className="p-1 text-muted-foreground hover:bg-secondary rounded-md cursor-pointer"
-                              title="Edit Detail"
-                            >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </button>
-                            <button
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                if (confirm('Delete this athlete record?')) {
-                                  await db.participants.delete(p.id, 'Admin Operations');
-                                  triggerRefresh();
-                                }
-                              }}
-                              className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md cursor-pointer"
-                              title="Delete Record"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        </td>
+                        {canModify && (
+                          <td className="p-3 text-center" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-center gap-1.5">
+                              <button
+                                onClick={() => setSelectedPartId(p.id)}
+                                className="p-1 text-muted-foreground hover:bg-secondary rounded-md cursor-pointer"
+                                title="Edit Detail"
+                              >
+                                <Edit2 className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (confirm('Delete this athlete record?')) {
+                                    await db.participants.delete(p.id, 'Admin Operations');
+                                    triggerRefresh();
+                                  }
+                                }}
+                                className="p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded-md cursor-pointer"
+                                title="Delete Record"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   })

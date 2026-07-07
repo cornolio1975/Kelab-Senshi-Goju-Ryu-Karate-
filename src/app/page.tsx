@@ -271,6 +271,7 @@ export default function Dashboard() {
                 </div>
                 <Link 
                   href="/participants" 
+                  prefetch={false}
                   className="text-xs text-primary font-bold hover:underline flex items-center gap-0.5 cursor-pointer"
                 >
                   <span>View All</span>

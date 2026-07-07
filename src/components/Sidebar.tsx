@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, Users, UsersRound, Tags, GitPullRequest, 
-  CalendarDays, Sword, ShieldCheck, Award, FileText, Settings, Trophy, Tv, LogOut
+  CalendarDays, Sword, ShieldCheck, Award, FileText, Settings, Trophy, Tv, LogOut, Zap,
+  CalendarCheck, History
 } from 'lucide-react';
 import { useTournament } from '@/context/TournamentContext';
 import { basePath } from '@/db/dbClient';
@@ -19,13 +20,22 @@ const MENU_ITEMS = [
   { name: 'Draws', icon: GitPullRequest, path: '/draws', badge: 'Draft' },
   { name: 'Schedule', icon: CalendarDays, path: '/schedule' },
   { name: 'Bouts', icon: Sword, path: '/bouts' },
+  { name: 'Scoring Board', icon: Zap, path: '/scoring', badge: 'LIVE' },
   { name: 'Officials', icon: ShieldCheck, path: '/officials' },
   { name: 'Public Scoreboard', icon: Tv, path: '/public', badge: 'Live' },
+  { name: 'Upcoming Tournaments', icon: CalendarCheck, path: '/public/tournaments', badge: 'New' },
+  { name: 'Past Tournaments', icon: History, path: '/public/past-tournaments' },
   { name: 'Reports', icon: FileText, path: '/reports' },
   { name: 'Settings', icon: Settings, path: '/settings' },
 ];
 
-export default function Sidebar() {
+
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { userRole, userEmail, logout, logoUrl } = useTournament();
 
@@ -36,7 +46,16 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-card border-r border-border h-screen flex flex-col sticky top-0 z-20 shrink-0">
+    <aside
+      className={`
+        no-print
+        w-64 bg-card border-r border-border h-screen flex flex-col shrink-0
+        transition-transform duration-300 ease-in-out
+        fixed top-0 left-0 z-40
+        md:static md:z-auto md:translate-x-0
+        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}
+    >
       <div className="h-16 flex items-center gap-3 px-6 border-b border-border">
         <div className="h-9 w-9 rounded-lg flex items-center justify-center overflow-hidden shadow-sm bg-neutral-100 dark:bg-neutral-800 border border-border">
           <img src={logoUrl || `${basePath}/logo.jpg`} alt="Logo" className="h-full w-full object-cover" />
@@ -57,6 +76,8 @@ export default function Sidebar() {
             <Link
               key={item.name}
               href={item.path}
+              prefetch={false}
+              onClick={onClose}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group ${
                 isActive
                   ? 'bg-secondary text-foreground shadow-sm border-l-2 border-primary pl-2.5'

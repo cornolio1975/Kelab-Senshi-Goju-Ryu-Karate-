@@ -5,11 +5,11 @@ import { useTournament } from '@/context/TournamentContext';
 import { db } from '@/db/dbClient';
 import { Category, Participant, Club } from '@/db/types';
 import { 
-  Plus, Tags, Merge, Split, Move, ArrowRight, X, Check, AlertCircle, RefreshCw 
+  Plus, Tags, Merge, Split, Move, ArrowRight, X, Check, AlertCircle, RefreshCw, Trash2 
 } from 'lucide-react';
 
 export default function CategoriesPage() {
-  const { refreshKey, triggerRefresh } = useTournament();
+  const { refreshKey, triggerRefresh, canModify } = useTournament();
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -40,6 +40,18 @@ export default function CategoriesPage() {
     eligible: boolean;
     reason: string;
   } | null>(null);
+
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [newCat, setNewCat] = useState({
+    name: '',
+    gender: 'Male' as any,
+    min_age: 18,
+    max_age: 99,
+    min_weight: 0,
+    max_weight: 100,
+    capacity: 32,
+    status: 'Open' as any
+  });
 
   useEffect(() => {
     setMounted(true);
@@ -188,6 +200,52 @@ export default function CategoriesPage() {
     }
   };
 
+  const handleAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCat.name) {
+      alert('Please fill in the category name.');
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      await db.categories.add(newCat);
+      alert('Category added successfully.');
+      setIsAddOpen(false);
+      setNewCat({
+        name: '',
+        gender: 'Male' as any,
+        min_age: 18,
+        max_age: 99,
+        min_weight: 0,
+        max_weight: 100,
+        capacity: 32,
+        status: 'Open' as any
+      });
+      triggerRefresh();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = async (catId: string) => {
+    if (!confirm('Are you sure you want to delete this category? All related bouts and mapping logs will be deleted!')) {
+      return;
+    }
+    try {
+      setLoading(true);
+      await db.categories.delete(catId);
+      alert('Category deleted successfully.');
+      triggerRefresh();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6 text-foreground w-full h-full overflow-y-auto">
       {/* Title Header */}
@@ -196,29 +254,38 @@ export default function CategoriesPage() {
           <h1 className="text-2xl font-bold tracking-tight">Category Management</h1>
           <p className="text-sm text-muted-foreground">Manage athlete weight brackets, trigger merges, splits, and custom overrides.</p>
         </div>
-        <div className="flex items-center gap-2 self-start">
-          <button
-            onClick={() => setIsMergeOpen(true)}
-            className="px-3.5 py-2 bg-card hover:bg-secondary border border-border text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
-          >
-            <Merge className="h-4 w-4 text-muted-foreground" />
-            <span>Merge Categories</span>
-          </button>
-          <button
-            onClick={() => setIsSplitOpen(true)}
-            className="px-3.5 py-2 bg-card hover:bg-secondary border border-border text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
-          >
-            <Split className="h-4 w-4 text-muted-foreground" />
-            <span>Split Brackets</span>
-          </button>
-          <button
-            onClick={() => setIsMoveOpen(true)}
-            className="px-3.5 py-2 bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer"
-          >
-            <Move className="h-4 w-4" />
-            <span>Reassign Athlete</span>
-          </button>
-        </div>
+        {canModify && (
+          <div className="flex items-center gap-2 self-start">
+            <button
+              onClick={() => setIsAddOpen(true)}
+              className="px-3.5 py-2 bg-card hover:bg-secondary border border-border text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="h-4 w-4 text-muted-foreground" />
+              <span>Add Category</span>
+            </button>
+            <button
+              onClick={() => setIsMergeOpen(true)}
+              className="px-3.5 py-2 bg-card hover:bg-secondary border border-border text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <Merge className="h-4 w-4 text-muted-foreground" />
+              <span>Merge Categories</span>
+            </button>
+            <button
+              onClick={() => setIsSplitOpen(true)}
+              className="px-3.5 py-2 bg-card hover:bg-secondary border border-border text-xs font-semibold rounded-lg shadow-xs flex items-center gap-1.5 cursor-pointer"
+            >
+              <Split className="h-4 w-4 text-muted-foreground" />
+              <span>Split Brackets</span>
+            </button>
+            <button
+              onClick={() => setIsMoveOpen(true)}
+              className="px-3.5 py-2 bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer"
+            >
+              <Move className="h-4 w-4" />
+              <span>Reassign Athlete</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {loading ? (
@@ -240,14 +307,29 @@ export default function CategoriesPage() {
                 {/* Category metadata */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
-                      cat.gender === 'Male' ? 'bg-blue-100 text-blue-800' : 'bg-pink-100 text-pink-800'
-                    }`}>
-                      {cat.gender}
-                    </span>
-                    <span className="text-[10px] font-semibold text-muted-foreground">
-                      Limit: {cat.min_weight}-{cat.max_weight}kg
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                        cat.gender === 'Male' 
+                          ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' 
+                          : cat.gender === 'Female' 
+                            ? 'bg-pink-100 text-pink-800 dark:bg-pink-900/30 dark:text-pink-400' 
+                            : 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400'
+                      }`}>
+                        {cat.gender}
+                      </span>
+                      <span className="text-[10px] font-bold text-muted-foreground bg-secondary/50 dark:bg-secondary/20 px-1.5 py-0.5 rounded border border-border/30">
+                        {cat.min_weight}-{cat.max_weight}kg
+                      </span>
+                    </div>
+                    {canModify && (
+                      <button
+                        onClick={() => handleDeleteCategory(cat.id)}
+                        className="p-1 hover:bg-secondary text-muted-foreground hover:text-red-500 rounded transition-colors cursor-pointer"
+                        title="Delete Category"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </div>
 
                   <h3 className="font-extrabold text-sm text-foreground truncate" title={cat.name}>
@@ -591,6 +673,132 @@ export default function CategoriesPage() {
                 className="px-4 py-1.5 bg-primary text-primary-foreground disabled:opacity-50 hover:bg-primary/95 text-xs font-bold rounded-lg cursor-pointer"
               >
                 Reassign Athlete
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* D. ADD CATEGORY DIALOG */}
+      {isAddOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-30 p-4">
+          <form onSubmit={handleAddSubmit} className="bg-card w-full max-w-md rounded-xl shadow-xl border border-border overflow-hidden animate-scale-in text-foreground">
+            <div className="p-5 border-b border-border bg-secondary/10 flex justify-between items-center">
+              <span className="font-bold text-sm">Add New Category</span>
+              <button type="button" onClick={() => setIsAddOpen(false)} className="p-1 text-muted-foreground hover:text-foreground">
+                <X className="h-4.5 w-4.5" />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div>
+                <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Category Name</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Cadet Male Kumite -52kg"
+                  value={newCat.name}
+                  onChange={(e) => setNewCat({ ...newCat, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Gender Focus</label>
+                  <select
+                    value={newCat.gender}
+                    onChange={(e) => setNewCat({ ...newCat, gender: e.target.value as any })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Mixed">Mixed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Status</label>
+                  <select
+                    value={newCat.status}
+                    onChange={(e) => setNewCat({ ...newCat, status: e.target.value as any })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  >
+                    <option value="Open">Open</option>
+                    <option value="Closed">Closed</option>
+                    <option value="Full">Full</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Min Age (Years)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newCat.min_age}
+                    onChange={(e) => setNewCat({ ...newCat, min_age: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Max Age (Years)</label>
+                  <input
+                    type="number"
+                    required
+                    value={newCat.max_age}
+                    onChange={(e) => setNewCat({ ...newCat, max_age: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Min Weight (kg)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={newCat.min_weight}
+                    onChange={(e) => setNewCat({ ...newCat, min_weight: parseFloat(e.target.value) })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Max Weight (kg)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={newCat.max_weight}
+                    onChange={(e) => setNewCat({ ...newCat, max_weight: parseFloat(e.target.value) })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Capacity Limits</label>
+                <input
+                  type="number"
+                  required
+                  value={newCat.capacity}
+                  onChange={(e) => setNewCat({ ...newCat, capacity: parseInt(e.target.value) })}
+                  className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                />
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border flex justify-end gap-2 bg-secondary/5">
+              <button type="button" onClick={() => setIsAddOpen(false)} className="px-3 py-1.5 border border-border text-muted-foreground hover:text-foreground rounded-lg text-xs font-semibold cursor-pointer">
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-lg cursor-pointer"
+              >
+                Add Category
               </button>
             </div>
           </form>

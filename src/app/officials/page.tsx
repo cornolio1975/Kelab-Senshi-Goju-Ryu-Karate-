@@ -8,7 +8,10 @@ import {
   MapPin, Check, X, RefreshCw, Grid, List, Mail, Phone, Users 
 } from 'lucide-react';
 
+import { useTournament } from '@/context/TournamentContext';
+
 export default function OfficialsPage() {
+  const { canModify } = useTournament();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [officials, setOfficials] = useState<Official[]>([]);
@@ -162,13 +165,15 @@ export default function OfficialsPage() {
             </button>
           </div>
 
-          <button
-            onClick={handleOpenAddModal}
-            className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5"
-          >
-            <Plus className="h-4 w-4 text-white" />
-            <span>Add Official</span>
-          </button>
+          {canModify && (
+            <button
+              onClick={handleOpenAddModal}
+              className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5"
+            >
+              <Plus className="h-4 w-4 text-white" />
+              <span>Add Official</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -256,7 +261,7 @@ export default function OfficialsPage() {
                     <th className="p-3">Assigned Ring</th>
                     <th className="p-3">Contact Details</th>
                     <th className="p-3 w-24 text-center">Status</th>
-                    <th className="p-3 w-28 text-center">Actions</th>
+                    {canModify && <th className="p-3 w-28 text-center">Actions</th>}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -299,24 +304,26 @@ export default function OfficialsPage() {
                           {off.status}
                         </span>
                       </td>
-                      <td className="p-3">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => handleOpenEditModal(off)}
-                            className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded cursor-pointer"
-                            title="Edit official details"
-                          >
-                            <Edit2 className="h-3.5 w-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(off.id)}
-                            className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded cursor-pointer"
-                            title="Delete official"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      </td>
+                      {canModify && (
+                        <td className="p-3">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleOpenEditModal(off)}
+                              className="p-1 text-muted-foreground hover:text-foreground hover:bg-secondary rounded cursor-pointer"
+                              title="Edit official details"
+                            >
+                              <Edit2 className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(off.id)}
+                              className="p-1 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded cursor-pointer"
+                              title="Delete official"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

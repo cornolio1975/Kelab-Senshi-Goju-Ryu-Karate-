@@ -5,11 +5,11 @@ import { useTournament } from '@/context/TournamentContext';
 import { db } from '@/db/dbClient';
 import { Team, Participant, Club, Coach } from '@/db/types';
 import { 
-  Plus, UsersRound, Trophy, User, Trash2, X, Check, AlertTriangle, ShieldCheck, RefreshCw 
+  Plus, UsersRound, Trophy, User, Trash2, X, Check, AlertTriangle, ShieldCheck, RefreshCw, Edit 
 } from 'lucide-react';
 
 export default function TeamsPage() {
-  const { refreshKey, triggerRefresh } = useTournament();
+  const { refreshKey, triggerRefresh, canModify } = useTournament();
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -35,6 +35,15 @@ export default function TeamsPage() {
   // Add Member state
   const [selectedPartId, setSelectedPartId] = useState('');
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  // Edit Team state
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editingTeamId, setEditingTeamId] = useState<string | null>(null);
+  const [editTeamName, setEditTeamName] = useState('');
+  const [editClubId, setEditClubId] = useState('');
+  const [editCoachId, setEditCoachId] = useState('');
+  const [editScore, setEditScore] = useState(0);
+  const [editRanking, setEditRanking] = useState(0);
 
   useEffect(() => {
     setMounted(true);
@@ -202,6 +211,59 @@ export default function TeamsPage() {
     }
   };
 
+  const handleOpenEditModal = (team: Team) => {
+    setEditingTeamId(team.id);
+    setEditTeamName(team.name);
+    setEditClubId(team.club_id);
+    setEditCoachId(team.coach_id || '');
+    setEditScore(team.score || 0);
+    setEditRanking(team.ranking || 0);
+    setIsEditOpen(true);
+  };
+
+  const handleEditTeamSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTeamId || !editTeamName || !editClubId) {
+      alert('Team Name and Club representation are required.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await db.teams.update(editingTeamId, {
+        name: editTeamName,
+        club_id: editClubId,
+        coach_id: editCoachId || undefined,
+        score: editScore,
+        ranking: editRanking || undefined
+      });
+      alert('Team updated successfully.');
+      setIsEditOpen(false);
+      setEditingTeamId(null);
+      triggerRefresh();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteTeam = async (teamId: string) => {
+    if (!confirm('Are you sure you want to delete this team? All member mappings will be cleared.')) {
+      return;
+    }
+    try {
+      setLoading(true);
+      await db.teams.delete(teamId);
+      alert('Team deleted successfully.');
+      triggerRefresh();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6 text-foreground w-full h-full overflow-y-auto">
       {/* Header */}
@@ -210,13 +272,15 @@ export default function TeamsPage() {
           <h1 className="text-2xl font-bold tracking-tight">Team Roster Management</h1>
           <p className="text-sm text-muted-foreground">Form club squads, define team captains, check validation rules, and track rankings.</p>
         </div>
-        <button
-          onClick={handleOpenCreateModal}
-          className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Create New Team</span>
-        </button>
+        {canModify && (
+          <button
+            onClick={handleOpenCreateModal}
+            className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5 cursor-pointer"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Create New Team</span>
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -281,12 +345,14 @@ export default function TeamsPage() {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                       <span>Squad Members ({members.length})</span>
-                      <button
-                        onClick={() => { setActiveTeamId(t.id); setIsAddMemberOpen(true); }}
-                        className="text-primary hover:underline flex items-center gap-0.5 cursor-pointer font-bold lowercase"
-                      >
-                        + Add Member
-                      </button>
+                      {canModify && (
+                        <button
+                          onClick={() => { setActiveTeamId(t.id); setIsAddMemberOpen(true); }}
+                          className="text-primary hover:underline flex items-center gap-0.5 cursor-pointer font-bold lowercase"
+                        >
+                          + Add Member
+                        </button>
+                      )}
                     </div>
 
                     <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
@@ -306,24 +372,26 @@ export default function TeamsPage() {
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-2">
-                              {m.id !== t.captain_id && (
+                            {canModify && (
+                              <div className="flex items-center gap-2">
+                                {m.id !== t.captain_id && (
+                                  <button
+                                    onClick={() => handleSetCaptain(t.id, m.id)}
+                                    className="text-[9px] font-semibold text-muted-foreground hover:text-primary cursor-pointer hover:underline"
+                                    title="Appoint Captain"
+                                  >
+                                    Make Captain
+                                  </button>
+                                )}
                                 <button
-                                  onClick={() => handleSetCaptain(t.id, m.id)}
-                                  className="text-[9px] font-semibold text-muted-foreground hover:text-primary cursor-pointer hover:underline"
-                                  title="Appoint Captain"
+                                  onClick={() => handleRemoveMember(t.id, m.id)}
+                                  className="p-0.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded cursor-pointer"
+                                  title="Remove athlete"
                                 >
-                                  Make Captain
+                                  <Trash2 className="h-3.5 w-3.5" />
                                 </button>
-                              )}
-                              <button
-                                onClick={() => handleRemoveMember(t.id, m.id)}
-                                className="p-0.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 rounded cursor-pointer"
-                                title="Remove athlete"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
+                              </div>
+                            )}
                           </div>
                         ))
                       )}

@@ -5,15 +5,16 @@ import { usePathname } from 'next/navigation';
 import { useTournament } from '@/context/TournamentContext';
 import { 
   Search, SlidersHorizontal, Download, Upload, MoreHorizontal, 
-  Plus, Bell, Moon, Sun, ChevronDown, CheckCircle, AlertTriangle 
+  Plus, Bell, Moon, Sun, ChevronDown, CheckCircle, AlertTriangle, Menu
 } from 'lucide-react';
 import { db } from '@/db/dbClient';
 
 interface TopBarProps {
   onImportClick?: () => void;
+  onMenuToggle?: () => void;
 }
 
-export default function TopBar({ onImportClick }: TopBarProps) {
+export default function TopBar({ onImportClick, onMenuToggle }: TopBarProps) {
   const pathname = usePathname();
   const {
     searchQuery,
@@ -73,8 +74,16 @@ export default function TopBar({ onImportClick }: TopBarProps) {
 
   return (
     <header className="h-16 px-6 glass-header flex items-center justify-between sticky top-0 z-10 w-full">
-      {/* Tournament Identifier */}
+      {/* Left: Hamburger (mobile) + Tournament Identifier */}
       <div className="flex items-center gap-2">
+        {/* Hamburger menu — visible only on mobile */}
+        <button
+          onClick={onMenuToggle}
+          className="md:hidden p-2 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+          aria-label="Toggle sidebar"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
         <div className="flex items-center gap-1 bg-secondary px-3 py-1.5 rounded-lg text-xs font-semibold text-foreground border border-border">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span>LIVE EVENT</span>

@@ -26,7 +26,30 @@ export default function AuthCallback() {
       const email = session.user.email;
       if (email) {
         // Find matched user
-        const matchedUser = usersList.find(u => u.email.toLowerCase() === email.toLowerCase());
+        let matchedUser = usersList.find(u => u.email.toLowerCase() === email.toLowerCase());
+        
+        // Database query fallback (handles new machines or async context load delays)
+        if (!matchedUser && supabase) {
+          try {
+            const { data, error } = await supabase
+              .from('system_users')
+              .select('*')
+              .eq('email', email.toLowerCase())
+              .maybeSingle();
+            if (!error && data) {
+              matchedUser = {
+                name: data.name,
+                email: data.email,
+                role: data.role as any,
+                status: data.status as any,
+                canModify: data.can_modify ?? false,
+                accessibility: data.accessibility
+              };
+            }
+          } catch (e) {
+            console.error('Failed to look up user in database:', e);
+          }
+        }
         
         if (matchedUser) {
           if (matchedUser.status === 'Suspended') {
@@ -41,7 +64,8 @@ export default function AuthCallback() {
           router.push(matchedUser.role === 'Viewer' ? '/public' : '/');
         } else {
           // Extract OAuth user metadata
-          const oauthRole = session.user.user_metadata?.role || 'Viewer';
+          // Force newly signed in OAuth users to Spectator (Viewer) role with no write access
+          const oauthRole = 'Viewer';
           const oauthName = session.user.user_metadata?.full_name || session.user.user_metadata?.name || email.split('@')[0];
           
           // Register new OAuth user locally
@@ -50,6 +74,7 @@ export default function AuthCallback() {
             email: email,
             role: oauthRole as 'Admin' | 'Co-Admin' | 'Viewer',
             status: 'Active' as const,
+            canModify: false,
             accessibility: {
               themeContrast: 'standard' as const,
               textScale: 'standard' as const,

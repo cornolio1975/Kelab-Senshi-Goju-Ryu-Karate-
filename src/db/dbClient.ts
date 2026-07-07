@@ -197,6 +197,14 @@ export const db = {
         return [cat1, cat2];
       }
       return mockStore.categories.split(catId, split1, split2);
+    },
+    delete: async (id: string): Promise<void> => {
+      if (supabase) {
+        const { error } = await supabase.from('categories').delete().eq('id', id);
+        if (error) throw error;
+        return;
+      }
+      return mockStore.categories.delete(id);
     }
   },
 
@@ -285,6 +293,15 @@ export const db = {
         return;
       }
       return mockStore.teams.removeMember(teamId, participantId);
+    },
+    delete: async (id: string): Promise<void> => {
+      if (supabase) {
+        const { error } = await supabase.from('teams').delete().eq('id', id);
+        if (error) throw error;
+        return;
+      }
+      // No-op for mock store (Supabase always connected in production)
+      return;
     }
   },
 
@@ -648,12 +665,43 @@ export const db = {
       return mockStore.bouts.clearDraw(catId);
     },
     generateDraw: async (catId: string, drawType: 'Elimination' | 'Round-robin', hasThirdPlace: boolean): Promise<Bout[]> => {
+      console.log('[dbClient.generateDraw] catId:', catId, 'drawType:', drawType, 'hasThirdPlace:', hasThirdPlace, 'isSupabase:', !!supabase);
       if (supabase) {
-        const generated = mockStore.bouts.generateDraw(catId, drawType, hasThirdPlace);
+        // Fetch active mappings from Supabase
+        const { data: mappings, error: mapErr } = await supabase
+          .from('participant_categories')
+          .select('participant_id')
+          .eq('category_id', catId);
+        if (mapErr) throw mapErr;
+
+        console.log('[dbClient.generateDraw] Supabase mappings fetched count:', mappings?.length || 0);
+        const participantIds = (mappings || []).map(m => m.participant_id);
+        let athletes: Participant[] = [];
+        if (participantIds.length > 0) {
+          const { data: partData, error: partErr } = await supabase
+            .from('participants')
+            .select('*')
+            .in('id', participantIds)
+            .is('deleted_at', null)
+            .neq('status', 'Cancelled');
+          if (partErr) throw partErr;
+          athletes = partData || [];
+        }
+
+        console.log('[dbClient.generateDraw] Supabase active athletes count:', athletes.length);
+        const generated = mockStore.bouts.generateDraw(catId, drawType, hasThirdPlace, athletes);
+        
+        // Remove the 'id' field so Supabase can generate proper UUIDs
+        const generatedWithoutId = generated.map(({ id, ...rest }) => rest);
+
         await supabase.from('bouts').delete().eq('category_id', catId);
-        const { data, error } = await supabase.from('bouts').insert(generated).select();
+        const { data, error } = await supabase.from('bouts').insert(generatedWithoutId).select();
         if (error) throw error;
-        return data || [];
+
+        const savedBouts = data || [];
+        // Sync local storage / mockStore cache
+        mockStore.bouts.saveBouts(catId, savedBouts);
+        return savedBouts;
       }
       return mockStore.bouts.generateDraw(catId, drawType, hasThirdPlace);
     },

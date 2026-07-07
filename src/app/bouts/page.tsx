@@ -8,7 +8,10 @@ import {
   Check, Award, Timer, ChevronRight, Volume2, VolumeX, RefreshCw 
 } from 'lucide-react';
 
+import { useTournament } from '@/context/TournamentContext';
+
 export default function BoutsAdminPage() {
+  const { canModify } = useTournament();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [bouts, setBouts] = useState<Bout[]>([]);
@@ -373,11 +376,11 @@ export default function BoutsAdminPage() {
                       <td className="p-3 text-center">
                         <button
                           onClick={() => startScoringSession(b)}
-                          disabled={isBye || b.status === 'Completed'}
-                          className="px-2.5 py-1 bg-primary text-primary-foreground hover:bg-primary/95 text-[10px] font-bold rounded-md disabled:opacity-40 cursor-pointer transition-all flex items-center gap-1 mx-auto"
+                          disabled={isBye || b.status === 'Completed' || !canModify}
+                          className="px-2.5 py-1 bg-primary text-primary-foreground hover:bg-primary/95 text-[10px] font-bold rounded-md disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-all flex items-center gap-1 mx-auto"
                         >
                           <Sword className="h-3 w-3" />
-                          <span>Run scoring</span>
+                          <span>{canModify ? 'Run scoring' : 'Read-Only'}</span>
                         </button>
                       </td>
                     </tr>

@@ -131,9 +131,9 @@ export function AdvancedBracketComponent({ bracket, onMatchComplete }: AdvancedB
                     {/* Match Status */}
                     <div className="mb-3 px-3 py-2 bg-slate-900 rounded text-sm">
                       <span className={`font-semibold ${
-                        getMatchStatus(match.id) === 'completed' ? 'text-green-400' : 'text-yellow-400'
+                        getMatchStatus(match) === 'completed' ? 'text-green-400' : 'text-yellow-400'
                       }`}>
-                        {getMatchStatus(match.id) === 'completed' ? '✓ Completed' : '◯ Pending'}
+                        {getMatchStatus(match) === 'completed' ? '✓ Completed' : '◯ Pending'}
                       </span>
                       {getWinnerDisplay(match.id) && (
                         <span className="text-slate-300 ml-2">
@@ -143,7 +143,7 @@ export function AdvancedBracketComponent({ bracket, onMatchComplete }: AdvancedB
                     </div>
 
                     {/* Actions */}
-                    {getMatchStatus(match.id) === 'pending' && (
+                    {getMatchStatus(match) === 'pending' && (
                       <div className="space-y-2">
                         {match.athlete1 && (
                           <button

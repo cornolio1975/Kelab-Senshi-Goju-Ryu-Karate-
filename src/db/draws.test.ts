@@ -301,4 +301,23 @@ describe('Karate Tournament Draw Generator Tests', () => {
       expect(finalR2Bout.participant_b_id).toBe('part-4');
     });
   });
+
+  describe('Generate Draw with passed athletes', () => {
+    it('uses passed athletes instead of loading from localStorage', () => {
+      // Create athletes and pass them directly
+      const customAthletes = createParticipants(2);
+      customAthletes[0].id = 'custom-1';
+      customAthletes[1].id = 'custom-2';
+
+      // Clear localStorage mapping to ensure it would throw if it loaded from localStorage
+      localStorage.setItem('ts_participants', JSON.stringify([]));
+      localStorage.setItem('ts_participant_categories', JSON.stringify([]));
+
+      const bouts = mockStore.bouts.generateDraw(catId, 'Elimination', false, customAthletes);
+      
+      expect(bouts.length).toBe(1);
+      expect(bouts[0].participant_a_id).toBe('custom-1');
+      expect(bouts[0].participant_b_id).toBe('custom-2');
+    });
+  });
 });

@@ -9,6 +9,8 @@ import {
   Trophy, Tv, Calendar, Flame, RefreshCw, X, ShieldAlert, Award, 
   MapPin, Clock, Search, ExternalLink, ChevronRight, Play, Check, Home
 } from 'lucide-react';
+import { SportdataBracket } from '@/components/SportdataBracket';
+
 
 export default function PublicSpectatorHub() {
   const { tournamentName, liveStreamUrl, logoUrl } = useTournament();
@@ -263,6 +265,7 @@ export default function PublicSpectatorHub() {
 
           <Link
             href="/"
+            prefetch={false}
             className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-800 hover:border-gray-700 bg-gray-900/40 hover:bg-gray-900/80 rounded-lg text-xs font-bold transition text-gray-300 hover:text-white cursor-pointer"
           >
             <Home className="h-3.5 w-3.5" />
@@ -539,98 +542,17 @@ export default function PublicSpectatorHub() {
                 </div>
               ) : (
                 /* Elimination Tree for public */
-                <div className="flex items-start gap-12 select-none min-w-max p-4 justify-center">
-                  {Object.keys(roundsData).sort((a,b)=>Number(a)-Number(b)).map((roundKey) => {
-                    const roundNo = Number(roundKey);
-                    const roundMatches = roundsData[roundNo];
-                    
-                    let roundTitle = `Round ${roundNo}`;
-                    if (roundMatches.length === 1) roundTitle = 'Final Match';
-                    else if (roundMatches.length === 2) roundTitle = 'Semi-finals';
-                    else if (roundMatches.length === 4) roundTitle = 'Quarter-finals';
-                    else if (roundMatches.length === 8) roundTitle = 'Round of 16';
-
-                    return (
-                      <div key={roundNo} className="flex flex-col gap-8 w-60 shrink-0 h-full justify-center">
-                        <div className="text-center font-bold text-[10px] text-gray-500 uppercase tracking-widest border-b border-gray-800 pb-2">
-                          {roundTitle}
-                        </div>
-                        
-                        <div className="flex-1 flex flex-col justify-around gap-6 py-4">
-                          {roundMatches.map((bout) => {
-                            const isResolved = bout.status === 'Completed' || bout.status === 'Walkover';
-                            const hasCompetitors = bout.participant_a_id && bout.participant_b_id;
-
-                            return (
-                              <div
-                                key={bout.id}
-                                onClick={() => setSelectedBoutDetails(bout)}
-                                className={`border rounded-lg bg-[#0a0f1d] overflow-hidden shadow-md transition-all ${
-                                  hasCompetitors 
-                                    ? 'border-gray-800 cursor-pointer hover:border-indigo-500/50 hover:shadow-lg' 
-                                    : 'border-gray-800/40 opacity-60'
-                                }`}
-                              >
-                                <div className="bg-gray-900/60 px-2 py-1 text-[9px] font-mono text-gray-500 flex justify-between border-b border-gray-800">
-                                  <span>Bout {bout.bout_no}</span>
-                                  <span>{bout.tatami}</span>
-                                </div>
-                                
-                                <div className="divide-y divide-gray-900">
-                                  {renderCompetitorRow(
-                                    bout.participant_a_id, 
-                                    bout.score_a, 
-                                    isResolved && bout.winner_id === bout.participant_a_id,
-                                    'bg-red-600'
-                                  )}
-                                  {renderCompetitorRow(
-                                    bout.participant_b_id, 
-                                    bout.score_b, 
-                                    isResolved && bout.winner_id === bout.participant_b_id,
-                                    'bg-blue-600'
-                                  )}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {/* Bronze medal match */}
-                  {bronzeMatch && (
-                    <div className="flex flex-col gap-8 w-60 shrink-0 h-full justify-center border-l border-gray-800 pl-6">
-                      <div className="text-center font-bold text-[10px] text-amber-500 uppercase tracking-widest border-b border-gray-800 pb-2">
-                        Bronze Match
-                      </div>
-                      <div className="flex-1 flex flex-col justify-center py-4">
-                        <div
-                          onClick={() => setSelectedBoutDetails(bronzeMatch)}
-                          className="border border-amber-500/20 rounded-lg bg-amber-500/5 overflow-hidden shadow-sm cursor-pointer hover:border-amber-500/50 transition"
-                        >
-                          <div className="bg-amber-500/10 px-2 py-1 text-[9px] font-mono text-amber-400 flex justify-between border-b border-amber-500/20">
-                            <span>Bronze Bracket</span>
-                            <span>{bronzeMatch.tatami}</span>
-                          </div>
-                          <div className="divide-y divide-gray-900">
-                            {renderCompetitorRow(
-                              bronzeMatch.participant_a_id,
-                              bronzeMatch.score_a,
-                              bronzeMatch.status === 'Completed' && bronzeMatch.winner_id === bronzeMatch.participant_a_id,
-                              'bg-amber-500'
-                            )}
-                            {renderCompetitorRow(
-                              bronzeMatch.participant_b_id,
-                              bronzeMatch.score_b,
-                              bronzeMatch.status === 'Completed' && bronzeMatch.winner_id === bronzeMatch.participant_b_id,
-                              'bg-amber-400'
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
+                <div className="p-4 overflow-auto bg-[#0a0f1d]/20 rounded-xl">
+                  <SportdataBracket
+                    bouts={currentCatBouts}
+                    participants={participants}
+                    clubs={clubs}
+                    categories={categories}
+                    selectedCatId={selectedCatId}
+                    canModify={false}
+                    onBoutClick={setSelectedBoutDetails}
+                    theme="dark"
+                  />
                 </div>
               )}
 

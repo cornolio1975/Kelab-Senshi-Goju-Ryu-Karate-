@@ -46,6 +46,7 @@ interface TournamentContextType {
   deleteUser: (email: string) => void;
   globalAccessibility: AccessibilitySettings;
   setGlobalAccessibility: (settings: AccessibilitySettings) => void;
+  canModify: boolean;
 }
 
 export interface AccessibilitySettings {
@@ -60,6 +61,7 @@ export interface SystemUser {
   email: string;
   role: 'Admin' | 'Co-Admin' | 'Viewer';
   status: 'Active' | 'Suspended';
+  canModify: boolean;
   accessibility: AccessibilitySettings;
 }
 
@@ -76,6 +78,7 @@ const defaultUsers: SystemUser[] = [
     email: 'admin@senshikarate.com',
     role: 'Admin',
     status: 'Active',
+    canModify: true,
     accessibility: {
       themeContrast: 'standard',
       textScale: 'standard',
@@ -88,6 +91,7 @@ const defaultUsers: SystemUser[] = [
     email: 'coadmin@senshikarate.com',
     role: 'Co-Admin',
     status: 'Active',
+    canModify: false,
     accessibility: {
       themeContrast: 'standard',
       textScale: 'standard',
@@ -100,6 +104,7 @@ const defaultUsers: SystemUser[] = [
     email: 'spectator@senshikarate.com',
     role: 'Viewer',
     status: 'Active',
+    canModify: false,
     accessibility: {
       themeContrast: 'standard',
       textScale: 'standard',
@@ -141,6 +146,23 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
   // User & Accessibility states
   const [usersList, setUsersListState] = useState<SystemUser[]>([]);
   const [globalAccessibility, setGlobalAccessibilityState] = useState<AccessibilitySettings>(defaultAccessibility);
+  const [canModify, setCanModify] = useState<boolean>(false);
+
+  // Dynamic canModify calculation
+  useEffect(() => {
+    if (!isLoggedIn) {
+      setCanModify(false);
+      return;
+    }
+    // Admin and Co-Admin always can modify (regardless of system_users table)
+    if (userRole === 'Admin' || userRole === 'Co-Admin') {
+      setCanModify(true);
+      return;
+    }
+    // For Viewer role, check per-user canModify flag in usersList
+    const matched = usersList.find(u => u.email.toLowerCase() === userEmail.toLowerCase());
+    setCanModify(!!matched?.canModify);
+  }, [isLoggedIn, userRole, userEmail, usersList]);
 
   // Initialize theme, livestream, users and auth role
   useEffect(() => {
@@ -181,15 +203,35 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
 
       // Initialize users list
       const storedUsers = localStorage.getItem('ts_users_list');
+      let initialList = defaultUsers;
       if (storedUsers) {
         try {
-          setUsersListState(JSON.parse(storedUsers));
-        } catch (e) {
-          setUsersListState(defaultUsers);
-        }
-      } else {
-        setUsersListState(defaultUsers);
-        localStorage.setItem('ts_users_list', JSON.stringify(defaultUsers));
+          initialList = JSON.parse(storedUsers);
+        } catch (e) {}
+      }
+      setUsersListState(initialList);
+
+      // Async fetch users from Supabase if available
+      if (supabase) {
+        supabase
+          .from('system_users')
+          .select('*')
+          .then(({ data, error }) => {
+            if (!error && data && data.length > 0) {
+              const mapped: SystemUser[] = data.map((row: any) => ({
+                name: row.name,
+                email: row.email,
+                role: row.role,
+                status: row.status,
+                canModify: row.can_modify ?? (row.role === 'Admin'),
+                accessibility: row.accessibility
+              }));
+              setUsersListState(mapped);
+              localStorage.setItem('ts_users_list', JSON.stringify(mapped));
+            } else if (error) {
+              console.warn('Could not load users from Supabase, using local fallback:', error.message);
+            }
+          });
       }
 
       // Initialize global accessibility
@@ -339,15 +381,28 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
     setRefreshKey(prev => prev + 1);
   };
 
-  const addUser = (user: SystemUser) => {
+  const addUser = async (user: SystemUser) => {
     const updated = [...usersList, user];
     setUsersListState(updated);
     if (typeof window !== 'undefined') {
       localStorage.setItem('ts_users_list', JSON.stringify(updated));
     }
+    if (supabase) {
+      try {
+        const { error } = await supabase.from('system_users').insert([{
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          status: user.status,
+          can_modify: user.canModify,
+          accessibility: user.accessibility
+        }]);
+        if (error) console.error('Failed to sync new user to Supabase:', error.message);
+      } catch (e) {}
+    }
   };
 
-  const updateUser = (email: string, updates: Partial<SystemUser>) => {
+  const updateUser = async (email: string, updates: Partial<SystemUser>) => {
     const updated = usersList.map(u => {
       if (u.email === email) {
         const updatedAccessibility = updates.accessibility 
@@ -365,13 +420,40 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
     if (typeof window !== 'undefined') {
       localStorage.setItem('ts_users_list', JSON.stringify(updated));
     }
+    if (supabase) {
+      const fullUser = updated.find(u => u.email === email);
+      if (fullUser) {
+        try {
+          const { error } = await supabase
+            .from('system_users')
+            .update({
+              name: fullUser.name,
+              role: fullUser.role,
+              status: fullUser.status,
+              can_modify: fullUser.canModify,
+              accessibility: fullUser.accessibility
+            })
+            .eq('email', email);
+          if (error) console.error('Failed to sync updated user to Supabase:', error.message);
+        } catch (e) {}
+      }
+    }
   };
 
-  const deleteUser = (email: string) => {
+  const deleteUser = async (email: string) => {
     const updated = usersList.filter(u => u.email !== email);
     setUsersListState(updated);
     if (typeof window !== 'undefined') {
       localStorage.setItem('ts_users_list', JSON.stringify(updated));
+    }
+    if (supabase) {
+      try {
+        const { error } = await supabase
+          .from('system_users')
+          .delete()
+          .eq('email', email);
+        if (error) console.error('Failed to sync user deletion to Supabase:', error.message);
+      } catch (e) {}
     }
   };
 
@@ -417,6 +499,7 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
         deleteUser,
         globalAccessibility,
         setGlobalAccessibility,
+        canModify,
       }}
     >
       {children}

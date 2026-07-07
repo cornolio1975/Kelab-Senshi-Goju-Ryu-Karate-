@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { db } from '@/db/dbClient';
 import { Bout, Category, Participant } from '@/db/types';
 import { CalendarDays, Save, Sparkles, Clock, RefreshCw, Layers, X } from 'lucide-react';
+import { useTournament } from '@/context/TournamentContext';
 
 export default function SchedulePage() {
+  const { canModify } = useTournament();
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [bouts, setBouts] = useState<Bout[]>([]);
@@ -145,10 +147,11 @@ export default function SchedulePage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0 flex-1">
+      <div className={`grid grid-cols-1 ${canModify ? 'lg:grid-cols-3' : 'lg:grid-cols-1'} gap-6 min-h-0 flex-1`}>
         
         {/* LEFT COLUMN: AUTO SCHEDULER WIZARD */}
-        <div className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col space-y-4 h-fit">
+        {canModify && (
+          <div className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col space-y-4 h-fit">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             <h2 className="text-sm font-bold uppercase tracking-wider text-foreground">Auto-Schedule Planner</h2>
@@ -230,10 +233,11 @@ export default function SchedulePage() {
               <span>Bulk Auto-Schedule Sequence</span>
             </button>
           </div>
-        </div>
+          </div>
+        )}
 
         {/* RIGHT COLUMN: BOUTS SCHEDULE GRID */}
-        <div className="bg-card border border-border rounded-xl shadow-xs lg:col-span-2 flex flex-col min-h-0 overflow-hidden">
+        <div className={`bg-card border border-border rounded-xl shadow-xs ${canModify ? 'lg:col-span-2' : ''} flex flex-col min-h-0 overflow-hidden`}>
           <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-primary" />
@@ -327,18 +331,20 @@ export default function SchedulePage() {
                               </span>
                             </div>
 
-                            <button
-                              onClick={() => {
-                                setEditBoutId(b.id);
-                                setTatami(b.tatami || 'Tatami 1');
-                                setScheduleTime(b.scheduled_time || '09:00');
-                              }}
-                              disabled={b.status === 'Completed' || b.status === 'Walkover'}
-                              className="p-1.5 hover:bg-secondary border border-border text-muted-foreground hover:text-foreground rounded-lg transition-all cursor-pointer disabled:opacity-40"
-                              title="Edit schedule details"
-                            >
-                              <Clock className="h-3.5 w-3.5" />
-                            </button>
+                            {canModify && (
+                              <button
+                                onClick={() => {
+                                  setEditBoutId(b.id);
+                                  setTatami(b.tatami || 'Tatami 1');
+                                  setScheduleTime(b.scheduled_time || '09:00');
+                                }}
+                                disabled={b.status === 'Completed' || b.status === 'Walkover'}
+                                className="p-1.5 hover:bg-secondary border border-border text-muted-foreground hover:text-foreground rounded-lg transition-all cursor-pointer disabled:opacity-40"
+                                title="Edit schedule details"
+                              >
+                                <Clock className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
                         )}
                       </div>
