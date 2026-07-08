@@ -40,18 +40,18 @@ export default function ImportModal({ isOpen, onClose }: ImportModalProps) {
 
   if (!isOpen) return null;
 
-  // Raw mock CSV sample to seed pasting
-  const sampleCSV = `Full Name,Gender,DOB,Weight,Height,Passport/IC,Club,Email,Phone,Payment,Medical
-Rayyan Iskandar,Male,2006-11-20,68,175,061120-10-2222,Senshi Karate Academy,rayyan@example.com,+6018-7776655,Paid,Cleared
-Sophia Lee,Female,2005-02-14,53.5,163,050214-14-9999,Goju-Ryu Karate Club,sophia@example.com,+6011-3334445,Pending,Review Needed
-Hao Xuan,Male,2003-05-10,72.3,180,030510-02-1234,Tiger Claw Dojo,haoxuan@example.com,,Unpaid,Review Needed`;
+  // Raw mock CSV sample to seed pasting - Tab-separated to match user's custom template
+  const sampleCSV = "Full\tName\tGender\tDOB\tWeight\tHeight\tPassport/IC\tClub\tEmail\tPhone\tPayment\tMedical\n" +
+    "Rayyan\tIskandar\tMale\t2006-11-20\t68\t175\t061120-10-2222\tSenshi Karate Academy\trayyan@example.com\t60121523691\tPaid\tCleared\n" +
+    "Sophia\tLee\tFemale\t2005-02-14\t53.5\t163\t050214-14-9999\tGoju-Ryu Karate Club\tsophia@example.com\t6011-3334445\tPending\tReview\n" +
+    "Hao\tXuan\tMale\t2003-05-10\t72.3\t180\t030510-02-1234\tTiger Claw Dojo\thaoxuan@example.com\t6018-7776655\tUnpaid\tNeeded";
 
   const downloadCSVTemplate = () => {
     const blob = new Blob([sampleCSV], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", "senshi_karate_participants_template.csv");
+    link.setAttribute("download", "senshi_karate_registration_template.csv");
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -117,22 +117,62 @@ Hao Xuan,Male,2003-05-10,72.3,180,030510-02-1234,Tiger Claw Dojo,haoxuan@example
         const line = lines[i].trim();
         if (!line) continue;
         
-        // Simple comma splitter (ignores quotes for simplicity)
-        const cols = line.split(',');
+        // Support tab-separated and comma-separated layouts
+        const cols = line.includes('\t') ? line.split('\t') : line.split(',');
         if (cols.length < 7) continue;
 
+        let fullName = '';
+        let gender: 'Male' | 'Female' = 'Male';
+        let dob = '2005-01-01';
+        let weight = 60;
+        let height = 170;
+        let passport_ic = '';
+        let club_name = 'Senshi Karate Academy';
+        let email = '';
+        let phone = '';
+        let payment_status: 'Paid' | 'Unpaid' | 'Pending' = 'Unpaid';
+        let medical_status: 'Cleared' | 'Review Needed' = 'Cleared';
+
+        if (cols.length >= 12) {
+          // Tabbed layout (12 columns: Full, Name, Gender, DOB, Weight, Height, Passport/IC, Club, Email, Phone, Payment, Medical)
+          fullName = `${cols[0]?.trim()} ${cols[1]?.trim()}`.trim();
+          gender = cols[2]?.trim() === 'Female' ? 'Female' : 'Male';
+          dob = cols[3]?.trim() || '2005-01-01';
+          weight = parseFloat(cols[4]?.trim()) || 60;
+          height = parseFloat(cols[5]?.trim()) || 170;
+          passport_ic = cols[6]?.trim() || `IC-${Math.random()}`;
+          club_name = cols[7]?.trim() || 'Senshi Karate Academy';
+          email = cols[8]?.trim() || '';
+          phone = cols[9]?.trim() || '';
+          payment_status = (cols[10]?.trim() as any) || 'Unpaid';
+          medical_status = cols[11]?.trim() === 'Cleared' ? 'Cleared' : 'Review Needed';
+        } else {
+          // Comma layout or standard (11 columns: Full Name, Gender, DOB, Weight, Height, Passport/IC, Club, Email, Phone, Payment, Medical)
+          fullName = cols[0]?.trim();
+          gender = cols[1]?.trim() === 'Female' ? 'Female' : 'Male';
+          dob = cols[2]?.trim() || '2005-01-01';
+          weight = parseFloat(cols[3]?.trim()) || 60;
+          height = parseFloat(cols[4]?.trim()) || 170;
+          passport_ic = cols[5]?.trim() || `IC-${Math.random()}`;
+          club_name = cols[6]?.trim() || 'Senshi Karate Academy';
+          email = cols[7]?.trim() || '';
+          phone = cols[8]?.trim() || '';
+          payment_status = (cols[9]?.trim() as any) || 'Unpaid';
+          medical_status = cols[10]?.trim() === 'Cleared' ? 'Cleared' : 'Review Needed';
+        }
+
         rows.push({
-          full_name: cols[0]?.trim(),
-          gender: cols[1]?.trim() === 'Female' ? 'Female' : 'Male',
-          dob: cols[2]?.trim() || '2005-01-01',
-          weight: parseFloat(cols[3]?.trim()) || 60,
-          height: parseFloat(cols[4]?.trim()) || 170,
-          passport_ic: cols[5]?.trim() || `IC-${Math.random()}`,
-          club_name: cols[6]?.trim() || 'Senshi Karate Academy',
-          email: cols[7]?.trim() || '',
-          phone: cols[8]?.trim() || '',
-          payment_status: (cols[9]?.trim() as any) || 'Unpaid',
-          medical_status: cols[10]?.trim() === 'Cleared' ? 'Cleared' : 'Review Needed'
+          full_name: fullName,
+          gender,
+          dob,
+          weight,
+          height,
+          passport_ic,
+          club_name,
+          email,
+          phone,
+          payment_status,
+          medical_status
         });
       }
 
