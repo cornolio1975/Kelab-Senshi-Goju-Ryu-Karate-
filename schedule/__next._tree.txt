@@ -1,2 +1,2 @@
 :HL["/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/1wd03t1wq55lu.css","style"]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"schedule","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"__mi4AqdJdT86_8VxHRu5"}
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"schedule","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}},"staleTime":300,"buildId":"nij45S0rIHcav8U-j5sA4"}

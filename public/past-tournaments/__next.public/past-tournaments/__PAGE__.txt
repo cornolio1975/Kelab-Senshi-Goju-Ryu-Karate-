@@ -3,7 +3,7 @@
 3:I[87269,["/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/14mrh2-p_w84d.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/3o1xz8a0-3azh.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/42hl2dpc9vcxc.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/2jdcwun_t1jfh.js"],"default"]
 6:I[97367,["/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/14mrh2-p_w84d.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/3o1xz8a0-3azh.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/42hl2dpc9vcxc.js"],"OutletBoundary"]
 7:"$Sreact.suspense"
-0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/2jdcwun_t1jfh.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"__mi4AqdJdT86_8VxHRu5"}
+0:{"rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/2jdcwun_t1jfh.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"isPartial":false,"staleTime":300,"varyParams":null,"buildId":"nij45S0rIHcav8U-j5sA4"}
 4:{}
 5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
 8:null
