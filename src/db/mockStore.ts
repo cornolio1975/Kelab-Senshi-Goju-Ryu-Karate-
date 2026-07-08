@@ -1217,6 +1217,15 @@ export const mockStore = {
 
       saveStoreData('ts_bouts', list);
       return updatedBout;
+    },
+    updateBoutState: (id: string, updates: Partial<Bout>): Bout => {
+      const list = getStoreData<Bout>('ts_bouts', []);
+      const idx = list.findIndex(b => b.id === id);
+      if (idx === -1) throw new Error('Bout not found');
+      const updated = { ...list[idx], ...updates };
+      list[idx] = updated;
+      saveStoreData('ts_bouts', list);
+      return updated;
     }
   },
 

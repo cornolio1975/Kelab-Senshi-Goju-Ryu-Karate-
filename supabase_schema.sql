@@ -173,7 +173,13 @@ CREATE TABLE IF NOT EXISTS bouts (
     status VARCHAR(20) DEFAULT 'Scheduled' CHECK (status IN ('Scheduled', 'Running', 'Completed', 'Walkover')),
     scheduled_time TIMESTAMPTZ,
     tatami VARCHAR(10),
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    senshu_a BOOLEAN DEFAULT FALSE,
+    senshu_b BOOLEAN DEFAULT FALSE,
+    penalties_a TEXT DEFAULT '',
+    penalties_b TEXT DEFAULT '',
+    timer_seconds INT DEFAULT 180,
+    timer_active BOOLEAN DEFAULT FALSE
 );
 
 -- Seed Initial Data with Static UUIDs for references

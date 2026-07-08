@@ -733,6 +733,14 @@ export const db = {
         return data;
       }
       return mockStore.bouts.updateBoutResult(boutId, winnerId, scoreA, scoreB);
+    },
+    updateBoutState: async (id: string, updates: Partial<Bout>): Promise<Bout> => {
+      if (supabase) {
+        const { data, error } = await supabase.from('bouts').update(updates).eq('id', id).select().single();
+        if (error) throw error;
+        return data;
+      }
+      return mockStore.bouts.updateBoutState(id, updates);
     }
   },
 

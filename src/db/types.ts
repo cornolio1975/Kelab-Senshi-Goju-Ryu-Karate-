@@ -150,6 +150,12 @@ export interface Bout {
   scheduled_time?: string;
   tatami?: string;
   created_at?: string;
+  senshu_a?: boolean;
+  senshu_b?: boolean;
+  penalties_a?: string;
+  penalties_b?: string;
+  timer_seconds?: number;
+  timer_active?: boolean;
 }
 
 export interface Official {

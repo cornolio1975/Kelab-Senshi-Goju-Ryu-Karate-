@@ -20,7 +20,7 @@ const MENU_ITEMS = [
   { name: 'Draws', icon: GitPullRequest, path: '/draws', badge: 'Draft' },
   { name: 'Schedule', icon: CalendarDays, path: '/schedule' },
   { name: 'Bouts', icon: Sword, path: '/bouts' },
-  { name: 'Scoring Board', icon: Zap, path: '/scoring', badge: 'LIVE' },
+  { name: 'Scoring Board', icon: Zap, path: '/dashboard/scoreboard', badge: 'WKF' },
   { name: 'Officials', icon: ShieldCheck, path: '/officials' },
   { name: 'Public Scoreboard', icon: Tv, path: '/public', badge: 'Live' },
   { name: 'Upcoming Tournaments', icon: CalendarCheck, path: '/public/tournaments', badge: 'New' },
