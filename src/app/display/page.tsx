@@ -353,7 +353,11 @@ function SpectatorDisplayContent() {
 
           {/* Huge Score */}
           <div className="flex justify-center my-6">
-            <span className="text-[12rem] lg:text-[15rem] font-black leading-none font-mono text-red-500 select-none tracking-tight drop-shadow-[0_0_55px_rgba(239,68,68,0.3)]">
+            <span className={`text-[12rem] lg:text-[15rem] font-black leading-none font-mono select-none tracking-tight transition-all duration-300 ${
+              scoreAka - scoreAo >= 8 
+                ? 'text-red-500 animate-pulse scale-105 drop-shadow-[0_0_80px_rgba(239,68,68,0.7)]' 
+                : 'text-red-500 drop-shadow-[0_0_55px_rgba(239,68,68,0.3)]'
+            }`}>
               {scoreAka}
             </span>
           </div>
@@ -414,6 +418,12 @@ function SpectatorDisplayContent() {
               Golden Score
             </div>
           )}
+
+          {Math.abs(scoreAka - scoreAo) >= 8 && (
+            <div className="mt-8 bg-red-500/20 text-red-500 border border-red-500/30 px-5 py-2.5 rounded-full font-black text-sm uppercase tracking-widest animate-bounce">
+              8-Point Gap Decision
+            </div>
+          )}
         </div>
 
         {/* AO BLUE CARD */}
@@ -437,7 +447,11 @@ function SpectatorDisplayContent() {
 
           {/* Huge Score */}
           <div className="flex justify-center my-6">
-            <span className="text-[12rem] lg:text-[15rem] font-black leading-none font-mono text-blue-400 select-none tracking-tight drop-shadow-[0_0_55px_rgba(59,130,246,0.3)]">
+            <span className={`text-[12rem] lg:text-[15rem] font-black leading-none font-mono select-none tracking-tight transition-all duration-300 ${
+              scoreAo - scoreAka >= 8 
+                ? 'text-blue-400 animate-pulse scale-105 drop-shadow-[0_0_80px_rgba(59,130,246,0.7)]' 
+                : 'text-blue-400 drop-shadow-[0_0_55px_rgba(59,130,246,0.3)]'
+            }`}>
               {scoreAo}
             </span>
           </div>

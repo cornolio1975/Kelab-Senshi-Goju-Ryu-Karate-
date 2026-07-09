@@ -275,9 +275,13 @@ export default function ScoreboardControlPage() {
   const handleAddScore = useCallback((side: 'aka' | 'ao', points: number) => {
     if (bout?.status === 'Completed') return;
     pushHistory();
+    let finalScoreAka = scoreAka;
+    let finalScoreAo = scoreAo;
+
     if (side === 'aka') {
       const newScore = Math.max(0, scoreAka + points);
       setScoreAka(newScore);
+      finalScoreAka = newScore;
       
       // Senshu rule: First scoring competitor receives Senshu if uncontested
       if (points > 0 && newScore > 0) {
@@ -297,6 +301,7 @@ export default function ScoreboardControlPage() {
     } else {
       const newScore = Math.max(0, scoreAo + points);
       setScoreAo(newScore);
+      finalScoreAo = newScore;
       
       if (points > 0 && newScore > 0) {
         if (scoreAo === 0) { // AO's first score
@@ -313,7 +318,16 @@ export default function ScoreboardControlPage() {
         setSenshuAo(false);
       }
     }
-  }, [scoreAka, scoreAo, senshuAka, senshuAo, hasTimerRun]);
+
+    // Check for 8-point gap differential rule
+    if (Math.abs(finalScoreAka - finalScoreAo) >= 8) {
+      setTimerActive(false);
+      triggerBuzzer();
+      setWinnerSide(finalScoreAka > finalScoreAo ? 'aka' : 'ao');
+      setWinMethod('Points'); // Points Advantage (Senshu / Gap)
+      setShowFinishModal(true);
+    }
+  }, [scoreAka, scoreAo, senshuAka, senshuAo, hasTimerRun, triggerBuzzer]);
 
   // Manage Penalties WKF System (C1, C2, C3, HC)
   const handleTogglePenalty = (side: 'aka' | 'ao', penalty: string) => {
@@ -650,6 +664,21 @@ export default function ScoreboardControlPage() {
         </div>
       )}
 
+      {Math.abs(scoreAka - scoreAo) >= 8 && bout.status !== 'Completed' && (
+        <div className="bg-yellow-950/40 border-y border-yellow-900/30 px-6 py-3 flex items-center justify-between text-sm font-semibold shrink-0 animate-pulse">
+          <span className="text-yellow-400 font-bold flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-ping" />
+            8-POINT LEAD DIFFERENTIAL REACHED! MATCH COMPLETED
+          </span>
+          <button
+            onClick={() => setShowFinishModal(true)}
+            className="px-4 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-black text-xs font-black uppercase tracking-wider rounded-xl transition cursor-pointer border border-yellow-400/20"
+          >
+            Confirm Winner
+          </button>
+        </div>
+      )}
+
       {/* Main Scoreboard Workspace */}
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 overflow-y-auto">
         {/* Left: AKA Red Side */}
@@ -680,7 +709,11 @@ export default function ScoreboardControlPage() {
 
             {/* Score */}
             <div className="my-8 flex items-center justify-center">
-              <span className="text-9xl font-black text-red-500 leading-none tracking-tight font-mono select-none drop-shadow-[0_0_35px_rgba(239,68,68,0.25)]">
+              <span className={`text-9xl font-black leading-none tracking-tight font-mono select-none transition-all duration-300 ${
+                scoreAka - scoreAo >= 8 
+                  ? 'text-red-500 animate-pulse scale-105 drop-shadow-[0_0_45px_rgba(239,68,68,0.65)]' 
+                  : 'text-red-500 drop-shadow-[0_0_35px_rgba(239,68,68,0.25)]'
+              }`}>
                 {scoreAka}
               </span>
             </div>
@@ -876,7 +909,11 @@ export default function ScoreboardControlPage() {
 
             {/* Score */}
             <div className="my-8 flex items-center justify-center">
-              <span className="text-9xl font-black text-blue-400 leading-none tracking-tight font-mono select-none drop-shadow-[0_0_35px_rgba(59,130,246,0.25)]">
+              <span className={`text-9xl font-black leading-none tracking-tight font-mono select-none transition-all duration-300 ${
+                scoreAo - scoreAka >= 8 
+                  ? 'text-blue-400 animate-pulse scale-105 drop-shadow-[0_0_45px_rgba(59,130,246,0.65)]' 
+                  : 'text-blue-400 drop-shadow-[0_0_35px_rgba(59,130,246,0.25)]'
+              }`}>
                 {scoreAo}
               </span>
             </div>
@@ -1017,6 +1054,12 @@ export default function ScoreboardControlPage() {
                   <option value="Kiken">Kiken (Opponent Withdrawal / Kiken)</option>
                 </select>
               </div>
+
+              {Math.abs(scoreAka - scoreAo) >= 8 && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl p-3 text-xs font-black text-center animate-pulse tracking-wide uppercase">
+                  ⚠️ 8-Point Lead Differential Reached!
+                </div>
+              )}
 
               {/* Score summary */}
               <div className="bg-[#121218] rounded-xl p-3 border border-white/5 flex items-center justify-between text-xs font-bold">
