@@ -1226,6 +1226,51 @@ export const mockStore = {
       list[idx] = updated;
       saveStoreData('ts_bouts', list);
       return updated;
+    },
+    resetBoutResult: (boutId: string, matchDuration: number): Bout => {
+      const list = getStoreData<Bout>('ts_bouts', []);
+      const idx = list.findIndex(b => b.id === boutId);
+      if (idx === -1) throw new Error('Bout not found');
+
+      const bout = list[idx];
+      const currentWinnerId = bout.winner_id;
+      
+      const updatedBout = {
+        ...bout,
+        winner_id: null,
+        score_a: 0,
+        score_b: 0,
+        senshu_a: false,
+        senshu_b: false,
+        penalties_a: '',
+        penalties_b: '',
+        timer_seconds: matchDuration,
+        timer_active: false,
+        status: 'Scheduled' as const
+      };
+      list[idx] = updatedBout;
+
+      if (bout.round_no !== 99 && bout.round_no < 5 && currentWinnerId) {
+        const nextRoundNo = bout.round_no + 1;
+        const nextBoutNo = Math.ceil(bout.bout_no / 2);
+        const nextBoutIdx = list.findIndex(b => b.category_id === bout.category_id && b.round_no === nextRoundNo && b.bout_no === nextBoutNo);
+        
+        if (nextBoutIdx !== -1) {
+          const nextBout = list[nextBoutIdx];
+          const isSlotA = bout.bout_no % 2 !== 0;
+          const nextWinnerId = isSlotA ? nextBout.participant_a_id : nextBout.participant_b_id;
+          if (nextWinnerId === currentWinnerId) {
+            if (isSlotA) {
+              list[nextBoutIdx] = { ...nextBout, participant_a_id: null };
+            } else {
+              list[nextBoutIdx] = { ...nextBout, participant_b_id: null };
+            }
+          }
+        }
+      }
+
+      saveStoreData('ts_bouts', list);
+      return updatedBout;
     }
   },
 

@@ -273,6 +273,7 @@ export default function ScoreboardControlPage() {
 
   // Adjust scores
   const handleAddScore = useCallback((side: 'aka' | 'ao', points: number) => {
+    if (bout?.status === 'Completed') return;
     pushHistory();
     if (side === 'aka') {
       const newScore = Math.max(0, scoreAka + points);
@@ -316,6 +317,7 @@ export default function ScoreboardControlPage() {
 
   // Manage Penalties WKF System (C1, C2, C3, HC)
   const handleTogglePenalty = (side: 'aka' | 'ao', penalty: string) => {
+    if (bout?.status === 'Completed') return;
     pushHistory();
     const currentPens = side === 'aka' ? [...penaltiesAka] : [...penaltiesAo];
     const setPens = side === 'aka' ? setPenaltiesAka : setPenaltiesAo;
@@ -347,6 +349,7 @@ export default function ScoreboardControlPage() {
 
   // Manage Senshu (uncontested first score advantages)
   const handleToggleSenshu = (side: 'aka' | 'ao') => {
+    if (bout?.status === 'Completed') return;
     pushHistory();
     if (side === 'aka') {
       setSenshuAka(!senshuAka);
@@ -481,6 +484,78 @@ export default function ScoreboardControlPage() {
     }
   };
 
+  // Rematch resets the bout back to Scheduled state
+  const handleRematch = async () => {
+    if (!boutId || !bout) return;
+
+    const confirmRematch = window.confirm("Are you sure you want to reset this match and run a rematch? All current scores and penalties will be cleared in the database.");
+    if (!confirmRematch) return;
+
+    try {
+      setSaving(true);
+
+      // Reset in DB (including advancing bracket removal)
+      await db.bouts.resetBoutResult(boutId, matchDuration);
+
+      // Reset local states
+      setScoreAka(0);
+      setScoreAo(0);
+      setSenshuAka(false);
+      setSenshuAo(false);
+      setPenaltiesAka([]);
+      setPenaltiesAo([]);
+      setTimeLeft(matchDuration * 10);
+      setTimerActive(false);
+      setWinnerSide(null);
+      setHistory([]);
+      setHasTimerRun(false);
+
+      // Update local bout state
+      setBout((prev) => prev ? {
+        ...prev,
+        score_a: 0,
+        score_b: 0,
+        senshu_a: false,
+        senshu_b: false,
+        penalties_a: '',
+        penalties_b: '',
+        timer_seconds: matchDuration,
+        timer_active: false,
+        winner_id: null,
+        status: 'Scheduled'
+      } : null);
+
+      // Broadcast update to display screen
+      if (broadcastChannelRef.current) {
+        broadcastChannelRef.current.postMessage({
+          boutId,
+          akaName: competitorAka?.full_name || 'TBD AKA',
+          akaClub: competitorAka?.club_id ? 'Senshi Karate Academy' : 'Senshi Club',
+          aoName: competitorAo?.full_name || 'TBD AO',
+          aoClub: competitorAo?.club_id ? 'Goju-Ryu Karate Club' : 'Goju-Ryu Club',
+          scoreAka: 0,
+          scoreAo: 0,
+          senshuAka: false,
+          senshuAo: false,
+          penaltiesAka: [],
+          penaltiesAo: [],
+          timeLeft: matchDuration * 10,
+          timerActive: false,
+          goldenScore: false,
+          winner: null,
+          winMethod: '',
+          matchDuration
+        });
+      }
+
+      alert("Match has been successfully reset. Ready for rematch!");
+    } catch (err: any) {
+      alert("Failed to reset match: " + err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Format countdown clock
   const formatMainTime = (tenths: number) => {
     const mins = Math.floor(tenths / 600);
@@ -546,7 +621,7 @@ export default function ScoreboardControlPage() {
           
           <button
             onClick={handleUndo}
-            disabled={history.length === 0}
+            disabled={history.length === 0 || bout.status === 'Completed'}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 disabled:opacity-30 rounded-lg text-xs font-bold transition border border-white/10 cursor-pointer"
           >
             <Undo className="h-3.5 w-3.5" /> Undo
@@ -561,6 +636,19 @@ export default function ScoreboardControlPage() {
           </Link>
         </div>
       </header>
+
+      {bout.status === 'Completed' && (
+        <div className="bg-red-950/40 border-y border-red-900/30 px-6 py-3 flex items-center justify-between text-sm font-semibold shrink-0">
+          <span className="text-red-400 font-bold">This match is completed. The results are locked in the database.</span>
+          <button
+            onClick={handleRematch}
+            disabled={saving}
+            className="px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white text-xs font-black uppercase tracking-wider rounded-xl transition cursor-pointer border border-red-500/20"
+          >
+            Rematch / Reset Match
+          </button>
+        </div>
+      )}
 
       {/* Main Scoreboard Workspace */}
       <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 overflow-y-auto">
@@ -679,14 +767,15 @@ export default function ScoreboardControlPage() {
               {timerActive ? (
                 <button
                   onClick={handleStopTimer}
-                  className="w-full py-3.5 bg-red-600 hover:bg-red-500 text-white rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer shadow-lg shadow-red-950/20"
+                  disabled={bout.status === 'Completed'}
+                  className="w-full py-3.5 bg-red-600 hover:bg-red-500 text-white disabled:opacity-40 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer shadow-lg shadow-red-950/20"
                 >
                   <Square className="h-4 w-4 fill-white" /> Stop Timer
                 </button>
               ) : (
                 <button
                   onClick={handleStartTimer}
-                  disabled={timeLeft === 0}
+                  disabled={timeLeft === 0 || bout.status === 'Completed'}
                   className="w-full py-3.5 bg-green-600 hover:bg-green-500 text-white disabled:opacity-40 rounded-2xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer shadow-lg shadow-green-950/20"
                 >
                   <Play className="h-4 w-4 fill-white" /> Start Timer
@@ -697,14 +786,14 @@ export default function ScoreboardControlPage() {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => handleAdjustTime(-10)}
-                  disabled={timerActive}
+                  disabled={timerActive || bout.status === 'Completed'}
                   className="py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-40 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1 transition cursor-pointer border border-white/10"
                 >
                   -10s
                 </button>
                 <button
                   onClick={() => handleAdjustTime(10)}
-                  disabled={timerActive}
+                  disabled={timerActive || bout.status === 'Completed'}
                   className="py-2.5 bg-white/5 hover:bg-white/10 disabled:opacity-40 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1 transition cursor-pointer border border-white/10"
                 >
                   +10s
@@ -713,7 +802,8 @@ export default function ScoreboardControlPage() {
 
               <button
                 onClick={handleResetTimer}
-                className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-white rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer border border-white/10"
+                disabled={timerActive || bout.status === 'Completed'}
+                className="w-full py-2.5 bg-white/5 hover:bg-white/10 text-white disabled:opacity-30 rounded-2xl font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer border border-white/10"
               >
                 <RotateCcw className="h-3.5 w-3.5" /> Reset Clock
               </button>

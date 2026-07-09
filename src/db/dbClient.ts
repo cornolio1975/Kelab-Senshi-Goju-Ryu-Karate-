@@ -803,6 +803,55 @@ export const db = {
         return data;
       }
       return mockStore.bouts.updateBoutState(id, updates);
+    },
+    resetBoutResult: async (boutId: string, matchDuration: number): Promise<Bout> => {
+      if (supabase) {
+        try {
+          mockStore.bouts.resetBoutResult(boutId, matchDuration);
+        } catch (e) {
+          console.warn('Local mockStore reset skipped:', e);
+        }
+
+        const { data: dbBouts, error: boutsErr } = await supabase.from('bouts').select('*');
+        if (!boutsErr && dbBouts) {
+          const bout = dbBouts.find(b => b.id === boutId);
+          if (bout && bout.round_no !== 99 && bout.round_no < 5) {
+            const nextRoundNo = bout.round_no + 1;
+            const nextBoutNo = Math.ceil(bout.bout_no / 2);
+            const nextBout = dbBouts.find(b => b.category_id === bout.category_id && b.round_no === nextRoundNo && b.bout_no === nextBoutNo);
+            if (nextBout) {
+              const isSlotA = bout.bout_no % 2 !== 0;
+              const currentWinnerId = bout.winner_id;
+              if (currentWinnerId) {
+                const nextWinnerId = isSlotA ? nextBout.participant_a_id : nextBout.participant_b_id;
+                if (nextWinnerId === currentWinnerId) {
+                  const updateData = isSlotA 
+                    ? { participant_a_id: null } 
+                    : { participant_b_id: null };
+                  await supabase.from('bouts').update(updateData).eq('id', nextBout.id);
+                }
+              }
+            }
+          }
+        }
+
+        const { data, error } = await supabase.from('bouts').update({
+          winner_id: null,
+          score_a: 0,
+          score_b: 0,
+          senshu_a: false,
+          senshu_b: false,
+          penalties_a: '',
+          penalties_b: '',
+          timer_seconds: matchDuration,
+          timer_active: false,
+          status: 'Scheduled'
+        }).eq('id', boutId).select().single();
+
+        if (error) throw error;
+        return data;
+      }
+      return mockStore.bouts.resetBoutResult(boutId, matchDuration);
     }
   },
 
