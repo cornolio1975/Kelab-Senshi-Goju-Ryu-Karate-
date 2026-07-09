@@ -102,6 +102,29 @@ function SpectatorDisplayContent() {
     }
   };
 
+  const playBeep = () => {
+    if (!soundBuzzerRef.current) return;
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Higher pitch (A5 tone)
+      
+      gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15); // Short beep
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.15);
+    } catch (err) {
+      console.warn('Audio Context error:', err);
+    }
+  };
+
   // Setup broadcast channel receiver
   useEffect(() => {
     setMounted(true);
@@ -237,7 +260,12 @@ function SpectatorDisplayContent() {
             playBuzzer();
             return 0;
           }
-          return prev - 1;
+          const nextVal = prev - 1;
+          // Beep on whole seconds in the last 5 seconds
+          if (nextVal <= 50 && nextVal > 0 && nextVal % 10 === 0) {
+            playBeep();
+          }
+          return nextVal;
         });
       }, 100);
     } else if (interval) {
@@ -358,7 +386,7 @@ function SpectatorDisplayContent() {
           
           {/* Giant digital timer */}
           <div className={`text-6xl lg:text-7xl font-black font-mono leading-none tracking-tighter transition-all duration-300 select-none ${
-            timeLeft <= 100 && timeLeft > 0 
+            timeLeft <= 150 && timeLeft > 0 
               ? 'text-red-500 scale-110 animate-pulse drop-shadow-[0_0_30px_rgba(239,68,68,0.3)]' 
               : 'text-yellow-400'
           }`}>

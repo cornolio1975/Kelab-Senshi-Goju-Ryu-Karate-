@@ -189,6 +189,29 @@ export default function ScoreboardControlPage() {
     }
   };
 
+  const triggerBeep = () => {
+    if (!soundEnabled) return;
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioCtx.createOscillator();
+      const gainNode = audioCtx.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Higher pitch (A5 tone)
+      
+      gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15); // Short warning beep
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioCtx.destination);
+
+      oscillator.start();
+      oscillator.stop(audioCtx.currentTime + 0.15);
+    } catch (err) {
+      console.warn('Audio Context error:', err);
+    }
+  };
+
   // Timer runner loop
   useEffect(() => {
     if (timerActive) {
@@ -199,7 +222,12 @@ export default function ScoreboardControlPage() {
             triggerBuzzer();
             return 0;
           }
-          return prev - 1;
+          const nextVal = prev - 1;
+          // Beep on whole seconds in the last 5 seconds (5.0s, 4.0s, 3.0s, 2.0s, 1.0s)
+          if (nextVal <= 50 && nextVal > 0 && nextVal % 10 === 0) {
+            triggerBeep();
+          }
+          return nextVal;
         });
       }, 100);
     } else if (timerRef.current) {
@@ -588,7 +616,7 @@ export default function ScoreboardControlPage() {
               
               {/* Giant Digital Clock */}
               <div className={`text-5xl font-black font-mono leading-none my-6 select-none ${
-                timeLeft <= 100 && timeLeft > 0 ? 'text-red-500 animate-pulse' : 'text-yellow-400'
+                timeLeft <= 150 && timeLeft > 0 ? 'text-red-500 animate-pulse' : 'text-yellow-400'
               }`}>
                 {formatTime(timeLeft)}
               </div>
