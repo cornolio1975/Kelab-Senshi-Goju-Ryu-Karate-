@@ -262,12 +262,12 @@ export default function ParticipantsPage() {
   );
 
   return (
-    <div className="flex h-[calc(100vh-64px)] w-full overflow-hidden text-foreground bg-background">
+    <div className="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-64px)] w-full text-foreground bg-background overflow-y-auto lg:overflow-hidden">
       
       {/* ======================================================== */}
       {/* LEFT COLUMN: CATEGORY TREE SIDE-PANEL                     */}
       {/* ======================================================== */}
-      <div className="w-72 bg-card border-r border-border h-full flex flex-col shrink-0">
+      <div className="w-full lg:w-72 bg-card border-b lg:border-b-0 lg:border-r border-border h-48 lg:h-full flex flex-col shrink-0">
         
         {/* Categories Tab selectors (ALL / Checked Checkmark) */}
         <div className="flex border-b border-border text-xs font-semibold shrink-0 bg-secondary/10">
@@ -351,10 +351,10 @@ export default function ParticipantsPage() {
       {/* ======================================================== */}
       {/* RIGHT COLUMN: MAIN TABLE & FILTERS PANEL                  */}
       {/* ======================================================== */}
-      <div className="flex-1 h-full flex flex-col min-w-0 bg-background overflow-hidden p-6 space-y-4">
+      <div className="flex-1 min-w-0 bg-background p-4 lg:p-6 space-y-4 flex flex-col h-auto lg:h-full lg:overflow-hidden">
         
         {/* Title Header */}
-        <div className="flex items-center justify-between shrink-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
           <div>
             <h2 className="text-xl font-extrabold tracking-tight">Participants</h2>
             <p className="text-xs text-muted-foreground">Manage status, search school/club squads, and verify weights.</p>
@@ -515,7 +515,7 @@ export default function ParticipantsPage() {
 
         {/* Participant Data Table (Split layout right side) */}
         <div className="flex-1 border border-border bg-card rounded-xl shadow-xs overflow-hidden flex flex-col">
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead className="bg-secondary/40 sticky top-0 border-b border-border z-10">
                 <tr>
