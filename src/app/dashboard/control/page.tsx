@@ -854,8 +854,8 @@ export default function ScoreboardControlPage() {
                   setMatchDuration(val);
                   setTimeLeft(val * 10);
                 }}
-                disabled={timerActive}
-                className="w-full bg-[#101015] border border-white/10 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-yellow-400 transition cursor-pointer"
+                disabled={timerActive || bout.status === 'Completed'}
+                className="w-full bg-[#101015] border border-white/10 rounded-xl px-3 py-2 text-xs text-white disabled:opacity-40 focus:outline-none focus:border-yellow-400 transition cursor-pointer"
               >
                 <option value={60}>1:00 Minute</option>
                 <option value={90}>1:30 Minutes</option>
