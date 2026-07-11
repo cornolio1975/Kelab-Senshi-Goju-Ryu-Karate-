@@ -599,9 +599,11 @@ export default function PublicRegistrationPage() {
       </main>
 
       {/* Public Footer */}
-      <footer className="max-w-4xl mx-auto py-12 text-center text-xs text-slate-600 relative z-10 border-t border-white/5 mt-12">
-        <span className="font-bold text-slate-400 block mb-1">Kelab Karate Do Senshi Goju-Ryu</span>
-        <span>Official Tournament Registration Portal — All Rights Reserved.</span>
+      <footer className="max-w-4xl mx-auto py-12 text-center text-xs text-slate-500 relative z-10 border-t border-white/5 mt-12 space-y-1">
+        <span className="font-bold text-slate-400 block mb-1">© 2026 KarateTech</span>
+        <div className="text-slate-450">Developed by <span className="font-semibold text-slate-350">SP Sport Data Solution</span></div>
+        <div className="text-[11px] text-slate-500">Professional Karate Tournament Management System</div>
+        <div className="text-[11px] text-slate-550">All Rights Reserved.</div>
       </footer>
 
     </div>

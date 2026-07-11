@@ -288,9 +288,12 @@ export default function LandingPage() {
               Affiliated school promoting traditional values, athletic excellence, and character development in Puchong, Selangor.
             </p>
           </div>
-          <div className="flex flex-col md:items-end gap-1.5">
-            <span>Official Tournament Portal — All Rights Reserved.</span>
-            <span>Contact Dojo: <a href="mailto:senshikarate@gmail.com" className="text-indigo-400 hover:underline">senshikarate@gmail.com</a></span>
+          <div className="flex flex-col md:items-end gap-1 text-right">
+            <span className="font-bold text-white">© 2026 KarateTech</span>
+            <span>Developed by <span className="font-semibold text-slate-300">SP Sport Data Solution</span></span>
+            <span>Professional Karate Tournament Management System</span>
+            <span>All Rights Reserved.</span>
+            <span className="text-[10px] mt-1 text-slate-650">Contact Dojo: <a href="mailto:senshikarate@gmail.com" className="text-indigo-400 hover:underline">senshikarate@gmail.com</a></span>
           </div>
         </div>
       </footer>

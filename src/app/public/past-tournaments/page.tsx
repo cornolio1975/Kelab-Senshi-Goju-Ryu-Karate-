@@ -734,6 +734,14 @@ export default function PastTournamentsPage() {
           View Upcoming Tournaments
         </Link>
       </div>
+
+      {/* Public Footer */}
+      <footer className="max-w-4xl mx-auto py-8 text-center text-xs text-slate-500 border-t border-white/5 mt-6 space-y-1">
+        <div className="font-bold text-slate-400">© 2026 KarateTech</div>
+        <div>Developed by <span className="font-semibold text-slate-350">SP Sport Data Solution</span></div>
+        <div className="text-[11px] text-slate-500">Professional Karate Tournament Management System</div>
+        <div className="text-[11px] text-slate-550">All Rights Reserved.</div>
+      </footer>
     </div>
   );
 }
