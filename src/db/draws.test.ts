@@ -177,19 +177,19 @@ describe('Karate Tournament Draw Generator Tests', () => {
       expect(round1.length).toBe(2);
       expect(round2.length).toBe(1);
 
-      // One of the round 1 matches should have a bye (Walkover)
-      // Bracket list: [part-1, part-2, part-3, null]
-      // Bout 1: part-1 vs part-2 (Scheduled)
-      // Bout 2: part-3 vs null (Walkover, winner is part-3)
+      // Seed order for 4 slots: 1, 4, 2, 3
+      // Bracket list: [part-1, null, part-2, part-3]
+      // Bout 1: part-1 vs null (Walkover, winner is part-1)
+      // Bout 2: part-2 vs part-3 (Scheduled)
       expect(round1[0].participant_a_id).toBe('part-1');
-      expect(round1[0].participant_b_id).toBe('part-2');
-      expect(round1[0].status).toBe('Scheduled');
-      expect(round1[0].winner_id).toBeNull();
+      expect(round1[0].participant_b_id).toBeNull();
+      expect(round1[0].status).toBe('Walkover');
+      expect(round1[0].winner_id).toBe('part-1');
 
-      expect(round1[1].participant_a_id).toBe('part-3');
-      expect(round1[1].participant_b_id).toBeNull();
-      expect(round1[1].status).toBe('Walkover');
-      expect(round1[1].winner_id).toBe('part-3');
+      expect(round1[1].participant_a_id).toBe('part-2');
+      expect(round1[1].participant_b_id).toBe('part-3');
+      expect(round1[1].status).toBe('Scheduled');
+      expect(round1[1].winner_id).toBeNull();
 
       // Round 2 bout should start empty (scheduled, no participants initially assigned)
       expect(round2[0].participant_a_id).toBeNull();

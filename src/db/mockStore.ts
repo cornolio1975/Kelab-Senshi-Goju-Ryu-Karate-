@@ -1095,9 +1095,25 @@ export const mockStore = {
         const count = athletes.length;
         const slots = Math.max(2, Math.pow(2, Math.ceil(Math.log2(count))));
         
-        const bracketList: (string | null)[] = [...athletes.map(a => a.id)];
-        while (bracketList.length < slots) {
-          bracketList.push(null);
+        // Generate standard WKF seed order for symmetrical bye distribution
+        let seedOrder = [1, 2];
+        let currentSize = 2;
+        while (currentSize < slots) {
+          const nextOrder: number[] = [];
+          for (let i = 0; i < seedOrder.length; i++) {
+            nextOrder.push(seedOrder[i]);
+            nextOrder.push(currentSize * 2 + 1 - seedOrder[i]);
+          }
+          seedOrder = nextOrder;
+          currentSize *= 2;
+        }
+
+        const bracketList: (string | null)[] = new Array(slots).fill(null);
+        for (let i = 0; i < slots; i++) {
+          const seedIndex = seedOrder[i] - 1; // 1-based seed to 0-based index
+          if (seedIndex < count) {
+            bracketList[i] = athletes[seedIndex].id;
+          }
         }
 
         let boutNo = 1;
