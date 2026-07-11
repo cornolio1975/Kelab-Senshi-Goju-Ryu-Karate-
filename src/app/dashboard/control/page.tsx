@@ -420,20 +420,13 @@ export default function ScoreboardControlPage() {
         setPointsAka(finalPointsAka);
       }
       
-      // Senshu rule: First scoring competitor receives Senshu if uncontested
-      if (points > 0 && newScore > 0) {
-        if (scoreAka === 0) { // AKA's first score
-          if (scoreAo === 0) {
-            setSenshuAka(true);
-            setHasTimerRun(false);
-          } else if (scoreAo > 0 && !hasTimerRun) {
-            // Both scored in the same exchange/stoppage -> Senshu off
-            setSenshuAka(false);
-            setSenshuAo(false);
-          }
-        }
-      } else if (points < 0 && newScore === 0 && senshuAka) {
+      // Senshu rule: User requested tie-breaking Senshu logic
+      if (newScore > finalScoreAo) {
+        setSenshuAka(true);
+        setSenshuAo(false);
+      } else if (newScore === finalScoreAo) {
         setSenshuAka(false);
+        setSenshuAo(false);
       }
     } else {
       const newScore = Math.max(0, scoreAo + points);
@@ -448,18 +441,12 @@ export default function ScoreboardControlPage() {
         setPointsAo(finalPointsAo);
       }
       
-      if (points > 0 && newScore > 0) {
-        if (scoreAo === 0) { // AO's first score
-          if (scoreAka === 0) {
-            setSenshuAo(true);
-            setHasTimerRun(false);
-          } else if (scoreAka > 0 && !hasTimerRun) {
-            // Both scored in the same exchange/stoppage -> Senshu off
-            setSenshuAka(false);
-            setSenshuAo(false);
-          }
-        }
-      } else if (points < 0 && newScore === 0 && senshuAo) {
+      // Senshu rule: User requested tie-breaking Senshu logic
+      if (newScore > finalScoreAka) {
+        setSenshuAo(true);
+        setSenshuAka(false);
+      } else if (newScore === finalScoreAka) {
+        setSenshuAka(false);
         setSenshuAo(false);
       }
     }
@@ -931,12 +918,13 @@ export default function ScoreboardControlPage() {
               <span className="text-base font-black uppercase tracking-wider text-red-500">AKA - RED</span>
               <button 
                 onClick={() => handleToggleSenshu('aka')}
-                className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border transition cursor-pointer ${
+                className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border transition flex items-center gap-1 cursor-pointer ${
                   senshuAka 
-                    ? 'bg-yellow-400 text-black border-yellow-300 shadow-[0_0_15px_rgba(234,179,8,0.3)]' 
+                    ? 'bg-blue-600 text-white border-blue-400 shadow-[0_0_15px_rgba(37,99,235,0.3)]' 
                     : 'bg-transparent text-white/40 border-white/15 hover:border-white/30'
                 }`}
               >
+                {senshuAka && <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>}
                 SENSHU
               </button>
             </div>
@@ -1178,12 +1166,13 @@ export default function ScoreboardControlPage() {
             <div className="flex items-center justify-between mb-4">
               <button 
                 onClick={() => handleToggleSenshu('ao')}
-                className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border transition cursor-pointer ${
+                className={`text-[10px] font-black uppercase px-3 py-1 rounded-full border transition flex items-center gap-1 cursor-pointer ${
                   senshuAo 
-                    ? 'bg-yellow-400 text-black border-yellow-300 shadow-[0_0_15px_rgba(234,179,8,0.3)]' 
+                    ? 'bg-blue-600 text-white border-blue-400 shadow-[0_0_15px_rgba(37,99,235,0.3)]' 
                     : 'bg-transparent text-white/40 border-white/15 hover:border-white/30'
                 }`}
               >
+                {senshuAo && <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>}
                 SENSHU
               </button>
               <span className="text-base font-black uppercase tracking-wider text-blue-400">AO - BLUE</span>

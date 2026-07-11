@@ -368,7 +368,8 @@ function SpectatorDisplayContent() {
             <div className="flex justify-between items-center">
               <span className="text-4xl lg:text-5xl font-black uppercase text-red-500 tracking-wider">AKA - RED</span>
               {senshuAka && (
-                <span className="bg-yellow-400 text-black font-black text-xs uppercase px-4 py-1.5 rounded-full tracking-widest animate-pulse border-2 border-yellow-300 shadow-[0_0_20px_rgba(234,179,8,0.4)]">
+                <span className="bg-blue-600 text-white font-black text-xs uppercase px-4 py-1.5 rounded-full tracking-widest animate-pulse border-2 border-blue-400 shadow-[0_0_20px_rgba(37,99,235,0.4)] flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
                   先取 SENSHU
                 </span>
               )}
@@ -503,7 +504,8 @@ function SpectatorDisplayContent() {
             <div className="flex justify-between items-center flex-row-reverse">
               <span className="text-4xl lg:text-5xl font-black uppercase text-blue-400 tracking-wider">AO - BLUE</span>
               {senshuAo && (
-                <span className="bg-yellow-400 text-black font-black text-xs uppercase px-4 py-1.5 rounded-full tracking-widest animate-pulse border-2 border-yellow-300 shadow-[0_0_20px_rgba(234,179,8,0.4)]">
+                <span className="bg-blue-600 text-white font-black text-xs uppercase px-4 py-1.5 rounded-full tracking-widest animate-pulse border-2 border-blue-400 shadow-[0_0_20px_rgba(37,99,235,0.4)] flex items-center gap-1.5">
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
                   先取 SENSHU
                 </span>
               )}
