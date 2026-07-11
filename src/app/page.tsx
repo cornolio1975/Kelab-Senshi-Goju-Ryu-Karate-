@@ -293,7 +293,7 @@ export default function LandingPage() {
             <span>Developed by <span className="font-semibold text-slate-300">SP Sport Data Solution</span></span>
             <span>Professional Karate Tournament Management System</span>
             <span>All Rights Reserved.</span>
-            <span className="text-[10px] mt-1 text-slate-650">Contact Dojo: <a href="mailto:senshikarate@gmail.com" className="text-indigo-400 hover:underline">senshikarate@gmail.com</a></span>
+            <span className="text-[10px] mt-1 text-slate-650">Contact Dojo: <a href="mailto:karatetech@gmail.com" className="text-indigo-400 hover:underline">karatetech@gmail.com</a></span>
           </div>
         </div>
       </footer>

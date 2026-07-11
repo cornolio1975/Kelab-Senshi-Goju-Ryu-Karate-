@@ -425,7 +425,7 @@ export default function TournamentsPage() {
         <span>
           All registrations are processed through our official registration
           portal. For inquiries, contact us at{' '}
-          <a href="mailto:senshikarate@gmail.com">senshikarate@gmail.com</a>
+          <a href="mailto:karatetech@gmail.com">karatetech@gmail.com</a>
         </span>
       </div>
 
