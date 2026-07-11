@@ -161,7 +161,6 @@ export interface Bout {
   penalties_c2_b?: string;
   penalties_c3_b?: string;
   victory_method?: string;
-  match_end_time?: string;
   points_aka_history?: string;
   points_ao_history?: string;
   timer_seconds?: number;

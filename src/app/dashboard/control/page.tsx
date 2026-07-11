@@ -648,8 +648,7 @@ export default function ScoreboardControlPage() {
         penalties_c3_b: String(c3Ao),
         points_aka_history: pointsAka.join(','),
         points_ao_history: pointsAo.join(','),
-        victory_method: winMethod,
-        match_end_time: new Date().toISOString()
+        victory_method: winMethod
       });
 
       // Update bout status, scores and declare winner
@@ -696,8 +695,7 @@ export default function ScoreboardControlPage() {
         penalties_c3_b: '0',
         points_aka_history: '',
         points_ao_history: '',
-        victory_method: '',
-        match_end_time: ''
+        victory_method: ''
       });
 
       // Reset local states
@@ -739,7 +737,6 @@ export default function ScoreboardControlPage() {
         points_aka_history: '',
         points_ao_history: '',
         victory_method: '',
-        match_end_time: '',
         timer_seconds: matchDuration,
         timer_active: false,
         winner_id: null,
