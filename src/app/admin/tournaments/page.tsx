@@ -93,11 +93,24 @@ export default function TournamentsAdminPage() {
     setName(t.name);
     setOrganizer(t.organizer);
     setDate(t.date);
-    setDateIso(t.date_iso ? t.date_iso.split('T')[0] : '');
+    const parseToInputDate = (isoStr: string | undefined | null, displayStr: string) => {
+      if (!isoStr) return '';
+      const parsed = new Date(isoStr);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toISOString().split('T')[0];
+      }
+      const parsedDisplay = new Date(displayStr);
+      if (!isNaN(parsedDisplay.getTime())) {
+        return parsedDisplay.toISOString().split('T')[0];
+      }
+      return '';
+    };
+
+    setDateIso(parseToInputDate(t.date_iso, t.date));
     setVenue(t.venue);
     setCity(t.city);
     setRegClose(t.registration_close);
-    setRegCloseIso(t.registration_close_iso ? t.registration_close_iso.split('T')[0] : '');
+    setRegCloseIso(parseToInputDate(t.registration_close_iso, t.registration_close));
     setStatus(t.status);
     setFeatured(!!t.featured);
     setDiscipline(t.discipline || 'Kata, Kumite');
@@ -115,8 +128,26 @@ export default function TournamentsAdminPage() {
     if (!canModify) return alert('You do not have permissions to modify tournaments.');
     
     // Auto-calculate readable display dates if empty
-    const displayDate = date || new Date(dateIso).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
-    const displayReg = regClose || new Date(regCloseIso).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
+    const parseDisplayDate = () => {
+      if (date && date.trim()) return date.trim();
+      if (!dateIso) return '';
+      const parsed = new Date(dateIso);
+      return !isNaN(parsed.getTime()) 
+        ? parsed.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }) 
+        : '';
+    };
+
+    const parseDisplayReg = () => {
+      if (regClose && regClose.trim()) return regClose.trim();
+      if (!regCloseIso) return '';
+      const parsed = new Date(regCloseIso);
+      return !isNaN(parsed.getTime()) 
+        ? parsed.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }) 
+        : '';
+    };
+
+    const displayDate = parseDisplayDate();
+    const displayReg = parseDisplayReg();
 
     const payload = {
       name,
@@ -300,8 +331,10 @@ export default function TournamentsAdminPage() {
                       <p className="text-[10px] text-muted-foreground font-normal">Org: {t.organizer}</p>
                     </td>
                     <td className="p-3 text-muted-foreground font-medium">
-                      {t.date}
-                      <p className="text-[10px] text-gray-500 font-normal">Close: {t.registration_close}</p>
+                      {t.date || (t.date_iso ? new Date(t.date_iso).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : 'No Date')}
+                      <p className="text-[10px] text-gray-500 font-normal">
+                        Close: {t.registration_close || (t.registration_close_iso ? new Date(t.registration_close_iso).toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A')}
+                      </p>
                     </td>
                     <td className="p-3 text-muted-foreground">
                       {t.venue}

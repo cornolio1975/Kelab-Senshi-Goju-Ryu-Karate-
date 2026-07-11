@@ -76,7 +76,24 @@ interface TimeLeft {
 function useCountdown(targetIso: string): TimeLeft {
   const calculate = useCallback((): TimeLeft => {
     if (!targetIso) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-    const targetTime = new Date(targetIso).getTime();
+    
+    // Normalize targetIso to prevent Safari NaN errors
+    let formatted = targetIso;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(formatted)) {
+      formatted = formatted.replace(/-/g, '/');
+    } else if (formatted.includes('-') && !formatted.endsWith('Z') && !formatted.includes('+')) {
+      const parts = formatted.split('T');
+      parts[0] = parts[0].replace(/-/g, '/');
+      formatted = parts.join(' ');
+    }
+
+    let targetTime = new Date(formatted).getTime();
+    
+    if (isNaN(targetTime)) {
+      const clean = targetIso.replace('T', ' ').replace(/-/g, '/');
+      targetTime = new Date(clean).getTime();
+    }
+
     if (isNaN(targetTime)) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
     const diff = targetTime - Date.now();
     if (diff <= 0) return { days: 0, hours: 0, minutes: 0, seconds: 0 };
