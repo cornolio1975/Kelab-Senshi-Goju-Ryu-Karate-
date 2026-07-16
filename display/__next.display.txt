@@ -1,5 +1,5 @@
 1:"$Sreact.fragment"
-2:I[39756,["/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/14mrh2-p_w84d.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/0-z1kuhl59_r6.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/0mm_vhuk_7sse.js"],"default"]
-3:I[37457,["/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/14mrh2-p_w84d.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/0-z1kuhl59_r6.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/0mm_vhuk_7sse.js"],"default"]
+2:I[39756,["/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/14mrh2-p_w84d.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/0-z1kuhl59_r6.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/19xn41zkuz9hn.js"],"default"]
+3:I[37457,["/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/14mrh2-p_w84d.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/0-z1kuhl59_r6.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/19xn41zkuz9hn.js"],"default"]
 4:[]
-0:{"rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"isPartial":false,"staleTime":300,"varyParams":"$W4","buildId":"7T6TrZXXM9S_UIfrwzyCm"}
+0:{"rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"isPartial":false,"staleTime":300,"varyParams":"$W4","buildId":"UbVNJT3KmKQg0Bpl9Yhq-"}
