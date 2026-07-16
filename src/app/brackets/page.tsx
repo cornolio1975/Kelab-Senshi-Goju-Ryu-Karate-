@@ -3,9 +3,12 @@
 import React, { useState } from 'react';
 import { Bracket, generateBrackets, getBracketStats } from '@/lib/bracketGenerator';
 import { SAMPLE_ROSTER } from '@/lib/sampleRoster';
-import { ChevronDown, Users, Trophy } from 'lucide-react';
+import { ChevronDown, Users, Trophy, Printer } from 'lucide-react';
+import { useTournament } from '@/context/TournamentContext';
+import { basePath } from '@/db/dbClient';
 
 export default function BracketSystemPage() {
+  const { logoUrl } = useTournament();
   const [brackets, setBrackets] = useState<Bracket[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [selectedBracket, setSelectedBracket] = useState<string | null>(null);
@@ -18,24 +21,56 @@ export default function BracketSystemPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6">
+    <>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-6 no-print">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-5xl font-bold text-white mb-2 flex items-center gap-3">
-            <Trophy className="text-yellow-400" size={40} />
-            Karate Tournament Bracket System
-          </h1>
-          <p className="text-slate-300">Goju-Ryu Karate Championship 2026</p>
+        <div className="mb-8 flex items-center justify-between border-b border-gray-800 pb-4">
+          <div className="flex items-center gap-4">
+            <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-white/20 bg-slate-900 shrink-0">
+              <img src={logoUrl || `${basePath}/logo.jpg`} alt="Logo" className="h-full w-full object-cover" />
+            </div>
+            <div className="flex flex-col leading-none">
+              <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: '1.15rem', lineHeight: 1, letterSpacing: '0.01em' }}>
+                <span style={{ color: '#b91c2e' }}>Karate</span>
+                <span style={{ color: '#38bdf8' }}>Tech</span>
+              </div>
+              <div style={{ height: '2px', background: 'linear-gradient(90deg, #b91c2e 60%, transparent 100%)', marginTop: '2px', marginBottom: '2px', borderRadius: '1px' }} />
+              <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: '0.78rem', letterSpacing: '0.01em', color: '#818cf8', lineHeight: 1.15 }}>
+                SP SportData Solution
+              </span>
+              <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: '0.58rem', letterSpacing: '0.08em', color: '#64748b', lineHeight: 1.2, marginTop: '2px', whiteSpace: 'nowrap' }}>
+                • Precision. • Speed. • Results. •
+              </span>
+            </div>
+          </div>
+          <div className="text-right">
+            <h1 className="text-2xl font-bold text-white mb-1 flex items-center gap-2 justify-end">
+              <Trophy className="text-yellow-400" size={24} />
+              Bracket System
+            </h1>
+            <p className="text-xs text-slate-400">Goju-Ryu Karate Championship 2026</p>
+          </div>
         </div>
 
         {/* Generate Button */}
-        <button
-          onClick={handleGenerateBrackets}
-          className="mb-8 px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all transform hover:scale-105 shadow-lg"
-        >
-          Generate Brackets from Roster
-        </button>
+        <div className="flex gap-4 mb-8">
+          <button
+            onClick={handleGenerateBrackets}
+            className="px-8 py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-lg transition-all transform hover:scale-105 shadow-lg cursor-pointer"
+          >
+            Generate Brackets from Roster
+          </button>
+          {brackets.length > 0 && (
+            <button
+              onClick={() => window.print()}
+              className="px-8 py-3 bg-gradient-to-r from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white font-semibold rounded-lg transition-all transform hover:scale-105 shadow-lg cursor-pointer flex items-center gap-2"
+            >
+              <Printer size={18} />
+              Print Brackets
+            </button>
+          )}
+        </div>
 
         {/* Statistics */}
         {stats && (
@@ -161,5 +196,68 @@ export default function BracketSystemPage() {
         )}
       </div>
     </div>
+
+    {/* HIDDEN PRINT AREA — rendered for @media print only */}
+    <div className="hidden print:block text-black bg-white p-4">
+      <div className="flex items-center justify-between border-b-2 border-black pb-3 mb-6" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <img src={logoUrl || `${basePath}/logo.jpg`} alt="Logo" style={{ height: '50px', width: '50px', objectFit: 'cover', borderRadius: '50%' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+            <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: '1.15rem', lineHeight: 1, letterSpacing: '0.01em' }}>
+              <span style={{ color: '#b91c2e' }}>Karate</span>
+              <span style={{ color: '#38bdf8' }}>Tech</span>
+            </div>
+            <div style={{ height: '2px', background: 'linear-gradient(90deg, #b91c2e 60%, transparent 100%)', marginTop: '2px', marginBottom: '2px', borderRadius: '1px' }} />
+            <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: '0.78rem', letterSpacing: '0.01em', color: '#000', lineHeight: 1.15 }}>
+              SP SportData Solution
+            </span>
+            <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: '0.58rem', letterSpacing: '0.08em', color: '#64748b', lineHeight: 1.2, marginTop: '2px' }}>
+              • Precision. • Speed. • Results. •
+            </span>
+          </div>
+        </div>
+        <div className="text-right text-xs text-gray-600">
+          <div className="font-black text-sm">Bracket Sheet</div>
+          <div>Printed: {new Date().toLocaleDateString('en-MY', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
+        </div>
+      </div>
+
+      {brackets.map(bracket => (
+        <div key={bracket.id} className="mb-8" style={{ pageBreakAfter: 'always', breakAfter: 'page' }}>
+          <h2 className="text-lg font-bold border-b pb-2 mb-4">{bracket.division} ({bracket.athletes.length} Athletes)</h2>
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            <div>
+              <h3 className="text-sm font-semibold mb-2">Athletes:</h3>
+              <ul className="space-y-1 text-xs">
+                {bracket.athletes.map(a => (
+                  <li key={a.registrationNo} className="border-b py-1">
+                    {a.fullName} - {a.weight}kg ({a.club})
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold mb-2">Matches:</h3>
+              <div className="space-y-2">
+                {bracket.rounds.map(r => (
+                  <div key={r.number} className="border p-2 rounded">
+                    <h4 className="text-xs font-bold text-blue-600 mb-1">Round {r.number}</h4>
+                    {r.matches.map(m => (
+                      <div key={m.id} className="text-[10px] flex justify-between py-0.5">
+                        <span>{m.athlete1?.fullName || 'TBD'}</span>
+                        <span className="text-gray-400">vs</span>
+                        <span>{m.athlete2?.fullName || 'TBD'}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+    </>
   );
 }
+

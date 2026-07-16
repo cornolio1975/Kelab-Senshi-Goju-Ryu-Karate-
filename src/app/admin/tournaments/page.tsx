@@ -65,7 +65,7 @@ export default function TournamentsAdminPage() {
   const resetForm = () => {
     setEditingId(null);
     setName('');
-    setOrganizer('Kelab Senshi Goju-Ryu');
+    setOrganizer('Kelab Senshi Goju-Ryu Karate-Do');
     setDate('');
     setDateIso(new Date().toISOString().split('T')[0]);
     setVenue('');

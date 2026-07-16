@@ -35,13 +35,9 @@ function SpectatorDisplayContent() {
   const [penaltiesAka, setPenaltiesAka] = useState<string[]>([]);
   const [penaltiesAo, setPenaltiesAo] = useState<string[]>([]);
 
-  // Detailed WKF warnings states
+  // Detailed WKF warnings states: C1, C2, C3, HC, H (1 to 5)
   const [c1Aka, setC1Aka] = useState<number>(0);
-  const [c2Aka, setC2Aka] = useState<number>(0);
-  const [c3Aka, setC3Aka] = useState<number>(0);
   const [c1Ao, setC1Ao] = useState<number>(0);
-  const [c2Ao, setC2Ao] = useState<number>(0);
-  const [c3Ao, setC3Ao] = useState<number>(0);
 
   // Timer states
   const [timeLeft, setTimeLeft] = useState<number>(1800);
@@ -57,6 +53,7 @@ function SpectatorDisplayContent() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
   const hideControlsTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const soundPlayedRef = useRef<string | null>(null);
 
   // Fullscreen toggle
   const toggleFullscreen = () => {
@@ -86,6 +83,19 @@ function SpectatorDisplayContent() {
     return () => { if (hideControlsTimerRef.current) clearTimeout(hideControlsTimerRef.current); };
   }, []);
 
+  // Trigger Superior Points fanfare or Hansoku alarm when winner is declared
+  useEffect(() => {
+    if (winnerSide && winMethod === 'HANSOKU' && soundPlayedRef.current !== winnerSide + '-hansoku') {
+      soundPlayedRef.current = winnerSide + '-hansoku';
+      playHansokuAlarm();
+    } else if (winnerSide && winMethod === 'Superior Points' && soundPlayedRef.current !== winnerSide + '-superior') {
+      soundPlayedRef.current = winnerSide + '-superior';
+      playSuperiorPointsSound();
+    } else if (!winnerSide) {
+      soundPlayedRef.current = null;
+    }
+  }, [winnerSide, winMethod]);
+
   // Web Audio buzzer sound
   const playBuzzer = () => {
     if (!soundBuzzerRef.current) return;
@@ -114,22 +124,82 @@ function SpectatorDisplayContent() {
     if (!soundBuzzerRef.current) return;
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // Higher pitch (A5 tone)
       
-      gainNode.gain.setValueAtTime(0.4, audioCtx.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15); // Short beep
+      const playBellRing = (startTime: number) => {
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime + startTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + startTime + 0.6);
+        gainNode.connect(audioCtx.destination);
 
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
+        const freqs = [880, 1200, 1760];
+        freqs.forEach((f) => {
+          const osc = audioCtx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(f, audioCtx.currentTime + startTime);
+          osc.connect(gainNode);
+          osc.start(audioCtx.currentTime + startTime);
+          osc.stop(audioCtx.currentTime + startTime + 0.6);
+        });
+      };
 
-      oscillator.start();
-      oscillator.stop(audioCtx.currentTime + 0.15);
+      playBellRing(0);
+      playBellRing(0.4);
+      playBellRing(0.8);
     } catch (err) {
       console.warn('Audio Context error:', err);
+    }
+  };
+
+  const playSuperiorPointsSound = () => {
+    if (!soundBuzzerRef.current) return;
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      const playTone = (freq: number, start: number, duration: number) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + start);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + start + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + start);
+        osc.stop(audioCtx.currentTime + start + duration);
+      };
+
+      playTone(523.25, 0, 0.15);
+      playTone(659.25, 0.15, 0.15);
+      playTone(783.99, 0.3, 0.15);
+      playTone(1046.50, 0.45, 0.35);
+    } catch (err) {
+      console.warn('Audio Context sound error:', err);
+    }
+  };
+
+  const playHansokuAlarm = () => {
+    if (!soundBuzzerRef.current) return;
+    try {
+      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      const playAlarmTone = (start: number) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, audioCtx.currentTime + start);
+        gain.gain.setValueAtTime(0.8, audioCtx.currentTime + start);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + start + 0.4);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(audioCtx.currentTime + start);
+        osc.stop(audioCtx.currentTime + start + 0.4);
+      };
+
+      playAlarmTone(0);
+      playAlarmTone(0.5);
+      playAlarmTone(1.0);
+    } catch (err) {
+      console.warn('Alarm sound error:', err);
     }
   };
 
@@ -162,11 +232,7 @@ function SpectatorDisplayContent() {
           setPenaltiesAka(data.penaltiesAka || []);
           setPenaltiesAo(data.penaltiesAo || []);
           setC1Aka(data.c1Aka || 0);
-          setC2Aka(data.c2Aka || 0);
-          setC3Aka(data.c3Aka || 0);
           setC1Ao(data.c1Ao || 0);
-          setC2Ao(data.c2Ao || 0);
-          setC3Ao(data.c3Ao || 0);
           setTimeLeft(data.timeLeft);
           setTimerActive(data.timerActive);
           setGoldenScore(data.goldenScore);
@@ -218,11 +284,7 @@ function SpectatorDisplayContent() {
           setPenaltiesAo(bout.penalties_b ? bout.penalties_b.split(',').filter(Boolean) : []);
           
           setC1Aka(bout.penalties_c1_a ? parseInt(bout.penalties_c1_a) || 0 : 0);
-          setC2Aka(bout.penalties_c2_a ? parseInt(bout.penalties_c2_a) || 0 : 0);
-          setC3Aka(bout.penalties_c3_a ? parseInt(bout.penalties_c3_a) || 0 : 0);
           setC1Ao(bout.penalties_c1_b ? parseInt(bout.penalties_c1_b) || 0 : 0);
-          setC2Ao(bout.penalties_c2_b ? parseInt(bout.penalties_c2_b) || 0 : 0);
-          setC3Ao(bout.penalties_c3_b ? parseInt(bout.penalties_c3_b) || 0 : 0);
 
           setTimeLeft((bout.timer_seconds ?? 180) * 10);
           setTimerActive(bout.timer_active ?? false);
@@ -255,11 +317,7 @@ function SpectatorDisplayContent() {
             setPenaltiesAo(updated.penalties_b ? updated.penalties_b.split(',').filter(Boolean) : []);
             
             setC1Aka(updated.penalties_c1_a ? parseInt(updated.penalties_c1_a) || 0 : 0);
-            setC2Aka(updated.penalties_c2_a ? parseInt(updated.penalties_c2_a) || 0 : 0);
-            setC3Aka(updated.penalties_c3_a ? parseInt(updated.penalties_c3_a) || 0 : 0);
             setC1Ao(updated.penalties_c1_b ? parseInt(updated.penalties_c1_b) || 0 : 0);
-            setC2Ao(updated.penalties_c2_b ? parseInt(updated.penalties_c2_b) || 0 : 0);
-            setC3Ao(updated.penalties_c3_b ? parseInt(updated.penalties_c3_b) || 0 : 0);
 
             setTimeLeft((updated.timer_seconds ?? 180) * 10);
             setTimerActive(updated.timer_active ?? false);
@@ -291,8 +349,8 @@ function SpectatorDisplayContent() {
             return 0;
           }
           const nextVal = prev - 1;
-          // Beep on whole seconds in the last 5 seconds
-          if (nextVal <= 50 && nextVal > 0 && nextVal % 10 === 0) {
+          // Beep once when exactly 15 seconds remaining
+          if (nextVal === 150) {
             playBeep();
           }
           return nextVal;
@@ -325,6 +383,12 @@ function SpectatorDisplayContent() {
       className="min-h-screen bg-black text-white flex flex-col justify-between overflow-hidden select-none font-sans p-8 relative"
       onMouseMove={resetHideTimer}
     >
+      {/* Hansoku Disqualification Blinking Banner */}
+      {(c1Aka >= 5 || c1Ao >= 5) && (
+        <div className="bg-red-600 text-white font-black text-center py-5 text-4xl animate-pulse tracking-widest uppercase border-b-2 border-red-500 shadow-[0_0_50px_rgba(220,38,38,0.6)] z-20">
+          🚨 HANSOKU – {c1Aka >= 5 ? 'AKA' : 'AO'} 🚨
+        </div>
+      )}
       {/* Floating Fullscreen Button */}
       <button
         onClick={toggleFullscreen}
@@ -363,10 +427,16 @@ function SpectatorDisplayContent() {
       {/* Main Scoreboard Arena Grid */}
       <div className="flex-1 grid grid-cols-12 gap-8 items-center">
         {/* AKA RED CARD */}
-        <div className="col-span-5 h-full bg-[#150000] border-4 border-red-600/40 rounded-[40px] p-8 flex flex-col justify-between relative shadow-[0_0_80px_rgba(239,68,68,0.1)]">
+        <div className={`col-span-5 h-full rounded-[40px] p-8 flex flex-col justify-between relative shadow-[0_0_80px_rgba(239,68,68,0.1)] transition-all duration-500 ${
+          winnerSide === 'aka' && winMethod === 'Superior Points'
+            ? 'bg-[#051a05] border-4 border-green-500 shadow-[0_0_80px_rgba(34,197,94,0.4)] text-green-400'
+            : 'bg-[#150000] border-4 border-red-600/40 text-white'
+        }`}>
           <div>
             <div className="flex justify-between items-center">
-              <span className="text-4xl lg:text-5xl font-black uppercase text-red-500 tracking-wider">AKA - RED</span>
+              <span className={`text-4xl lg:text-5xl font-black uppercase tracking-wider ${
+                winnerSide === 'aka' && winMethod === 'Superior Points' ? 'text-green-400' : 'text-red-500'
+              }`}>AKA - RED</span>
               {senshuAka && (
                 <span className="bg-blue-600 text-white font-black text-xs uppercase px-4 py-1.5 rounded-full tracking-widest animate-pulse border-2 border-blue-400 shadow-[0_0_20px_rgba(37,99,235,0.4)] flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
@@ -377,7 +447,9 @@ function SpectatorDisplayContent() {
             <h2 className="text-4xl lg:text-5xl font-black tracking-tight mt-6 truncate">
               {akaName}
             </h2>
-            <p className="text-red-400/50 text-base font-bold mt-1.5 uppercase tracking-wider">
+            <p className={`${
+              winnerSide === 'aka' && winMethod === 'Superior Points' ? 'text-green-400/50' : 'text-red-400/50'
+            } text-base font-bold mt-1.5 uppercase tracking-wider`}>
               {akaClub}
             </p>
           </div>
@@ -385,75 +457,38 @@ function SpectatorDisplayContent() {
           {/* Huge Score */}
           <div className="flex justify-center my-6">
             <span className={`text-[12rem] lg:text-[15rem] font-black leading-none font-mono select-none tracking-tight transition-all duration-300 ${
-              scoreAka - scoreAo >= 8 
-                ? 'text-red-500 animate-pulse scale-105 drop-shadow-[0_0_80px_rgba(239,68,68,0.7)]' 
-                : 'text-red-500 drop-shadow-[0_0_55px_rgba(239,68,68,0.3)]'
+              winnerSide === 'aka' && winMethod === 'Superior Points'
+                ? 'text-green-400 animate-pulse drop-shadow-[0_0_80px_rgba(34,197,94,0.7)]'
+                : scoreAka - scoreAo >= 8 
+                  ? 'text-red-500 animate-pulse scale-105 drop-shadow-[0_0_80px_rgba(239,68,68,0.7)]' 
+                  : 'text-red-500 drop-shadow-[0_0_55px_rgba(239,68,68,0.3)]'
             }`}>
               {scoreAka}
             </span>
           </div>
 
           {/* AKA Warnings Row */}
-          <div className="border-t-2 border-red-900/30 pt-4 space-y-2">
-            {/* Category 1 */}
+          <div className="border-t-2 border-red-900/30 pt-4">
             <div className="flex justify-between items-center gap-2">
-              <span className="text-[9px] font-bold text-red-500/70 w-8 text-left">C1</span>
-              {Array.from({ length: 4 }).map((_, i) => {
-                const level = i + 1;
-                const isActive = c1Aka >= level;
-                return (
-                  <div
-                    key={i}
-                    className={`flex-1 text-center py-1.5 rounded-lg text-xs font-black transition-all border ${
-                      isActive
-                        ? 'bg-red-500 text-black border-red-400 font-black shadow-[0_0_10px_rgba(239,68,68,0.35)]'
-                        : 'bg-transparent text-white/10 border-white/5'
-                    }`}
-                  >
-                    {level === 1 ? 'C' : level === 2 ? 'K' : level === 3 ? 'HC' : 'H'}
-                  </div>
-                );
-              })}
-            </div>
-            {/* Category 2 */}
-            <div className="flex justify-between items-center gap-2">
-              <span className="text-[9px] font-bold text-red-500/70 w-8 text-left">C2</span>
-              {Array.from({ length: 4 }).map((_, i) => {
-                const level = i + 1;
-                const isActive = c2Aka >= level;
-                return (
-                  <div
-                    key={i}
-                    className={`flex-1 text-center py-1.5 rounded-lg text-xs font-black transition-all border ${
-                      isActive
-                        ? 'bg-red-500 text-black border-red-400 font-black shadow-[0_0_10px_rgba(239,68,68,0.35)]'
-                        : 'bg-transparent text-white/10 border-white/5'
-                    }`}
-                  >
-                    {level === 1 ? 'C' : level === 2 ? 'K' : level === 3 ? 'HC' : 'H'}
-                  </div>
-                );
-              })}
-            </div>
-            {/* Category 3 */}
-            <div className="flex justify-between items-center gap-2">
-              <span className="text-[9px] font-bold text-red-500/70 w-8 text-left">C3</span>
-              {Array.from({ length: 4 }).map((_, i) => {
-                const level = i + 1;
-                const isActive = c3Aka >= level;
-                return (
-                  <div
-                    key={i}
-                    className={`flex-1 text-center py-1.5 rounded-lg text-xs font-black transition-all border ${
-                      isActive
-                        ? 'bg-red-500 text-black border-red-400 font-black shadow-[0_0_10px_rgba(239,68,68,0.35)]'
-                        : 'bg-transparent text-white/10 border-white/5'
-                    }`}
-                  >
-                    {level === 1 ? 'C' : level === 2 ? 'K' : level === 3 ? 'HC' : 'H'}
-                  </div>
-                );
-              })}
+              <span className="text-[9px] font-bold text-red-500/70 w-8 text-left">PEN</span>
+              <div className="flex-1 grid grid-cols-5 gap-1">
+                {[1, 2, 3, 4, 5].map((level) => {
+                  const isActive = c1Aka >= level;
+                  const labels = ['', 'C1', 'C2', 'C3', 'HC', 'H'];
+                  return (
+                    <div
+                      key={level}
+                      className={`text-center py-1.5 rounded-lg text-xs font-black transition-all border ${
+                        isActive
+                          ? 'bg-red-500 text-black border-red-400 font-black shadow-[0_0_10px_rgba(239,68,68,0.35)]'
+                          : 'bg-transparent text-white/10 border-white/5'
+                      }`}
+                    >
+                      {labels[level]}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -499,10 +534,16 @@ function SpectatorDisplayContent() {
         </div>
 
         {/* AO BLUE CARD */}
-        <div className="col-span-5 h-full bg-[#000515] border-4 border-blue-600/40 rounded-[40px] p-8 flex flex-col justify-between relative shadow-[0_0_80px_rgba(59,130,246,0.1)]">
+        <div className={`col-span-5 h-full rounded-[40px] p-8 flex flex-col justify-between relative shadow-[0_0_80px_rgba(59,130,246,0.1)] transition-all duration-500 ${
+          winnerSide === 'ao' && winMethod === 'Superior Points'
+            ? 'bg-[#051a05] border-4 border-green-500 shadow-[0_0_80px_rgba(34,197,94,0.4)] text-green-400'
+            : 'bg-[#000515] border-4 border-blue-600/40 text-white'
+        }`}>
           <div>
             <div className="flex justify-between items-center flex-row-reverse">
-              <span className="text-4xl lg:text-5xl font-black uppercase text-blue-400 tracking-wider">AO - BLUE</span>
+              <span className={`text-4xl lg:text-5xl font-black uppercase tracking-wider ${
+                winnerSide === 'ao' && winMethod === 'Superior Points' ? 'text-green-400' : 'text-blue-400'
+              }`}>AO - BLUE</span>
               {senshuAo && (
                 <span className="bg-blue-600 text-white font-black text-xs uppercase px-4 py-1.5 rounded-full tracking-widest animate-pulse border-2 border-blue-400 shadow-[0_0_20px_rgba(37,99,235,0.4)] flex items-center gap-1.5">
                   <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
@@ -513,7 +554,9 @@ function SpectatorDisplayContent() {
             <h2 className="text-4xl lg:text-5xl font-black tracking-tight mt-6 truncate text-right">
               {aoName}
             </h2>
-            <p className="text-blue-400/50 text-base font-bold mt-1.5 uppercase tracking-wider text-right">
+            <p className={`${
+              winnerSide === 'ao' && winMethod === 'Superior Points' ? 'text-green-400/50' : 'text-blue-400/50'
+            } text-base font-bold mt-1.5 uppercase tracking-wider text-right`}>
               {aoClub}
             </p>
           </div>
@@ -521,75 +564,38 @@ function SpectatorDisplayContent() {
           {/* Huge Score */}
           <div className="flex justify-center my-6">
             <span className={`text-[12rem] lg:text-[15rem] font-black leading-none font-mono select-none tracking-tight transition-all duration-300 ${
-              scoreAo - scoreAka >= 8 
-                ? 'text-blue-400 animate-pulse scale-105 drop-shadow-[0_0_80px_rgba(59,130,246,0.7)]' 
-                : 'text-blue-400 drop-shadow-[0_0_55px_rgba(59,130,246,0.3)]'
+              winnerSide === 'ao' && winMethod === 'Superior Points'
+                ? 'text-green-400 animate-pulse drop-shadow-[0_0_80px_rgba(34,197,94,0.7)]'
+                : scoreAo - scoreAka >= 8 
+                  ? 'text-blue-400 animate-pulse scale-105 drop-shadow-[0_0_80px_rgba(59,130,246,0.7)]' 
+                  : 'text-blue-400 drop-shadow-[0_0_55px_rgba(59,130,246,0.3)]'
             }`}>
               {scoreAo}
             </span>
           </div>
 
           {/* AO Warnings Row */}
-          <div className="border-t-2 border-blue-900/30 pt-4 space-y-2">
-            {/* Category 1 */}
+          <div className="border-t-2 border-blue-900/30 pt-4">
             <div className="flex justify-between items-center gap-2">
-              <span className="text-[9px] font-bold text-blue-400/70 w-8 text-left">C1</span>
-              {Array.from({ length: 4 }).map((_, i) => {
-                const level = i + 1;
-                const isActive = c1Ao >= level;
-                return (
-                  <div
-                    key={i}
-                    className={`flex-1 text-center py-1.5 rounded-lg text-xs font-black transition-all border ${
-                      isActive
-                        ? 'bg-blue-500 text-black border-blue-400 font-black shadow-[0_0_10px_rgba(59,130,246,0.35)]'
-                        : 'bg-transparent text-white/10 border-white/5'
-                    }`}
-                  >
-                    {level === 1 ? 'C' : level === 2 ? 'K' : level === 3 ? 'HC' : 'H'}
-                  </div>
-                );
-              })}
-            </div>
-            {/* Category 2 */}
-            <div className="flex justify-between items-center gap-2">
-              <span className="text-[9px] font-bold text-blue-400/70 w-8 text-left">C2</span>
-              {Array.from({ length: 4 }).map((_, i) => {
-                const level = i + 1;
-                const isActive = c2Ao >= level;
-                return (
-                  <div
-                    key={i}
-                    className={`flex-1 text-center py-1.5 rounded-lg text-xs font-black transition-all border ${
-                      isActive
-                        ? 'bg-blue-500 text-black border-blue-400 font-black shadow-[0_0_10px_rgba(59,130,246,0.35)]'
-                        : 'bg-transparent text-white/10 border-white/5'
-                    }`}
-                  >
-                    {level === 1 ? 'C' : level === 2 ? 'K' : level === 3 ? 'HC' : 'H'}
-                  </div>
-                );
-              })}
-            </div>
-            {/* Category 3 */}
-            <div className="flex justify-between items-center gap-2">
-              <span className="text-[9px] font-bold text-blue-400/70 w-8 text-left">C3</span>
-              {Array.from({ length: 4 }).map((_, i) => {
-                const level = i + 1;
-                const isActive = c3Ao >= level;
-                return (
-                  <div
-                    key={i}
-                    className={`flex-1 text-center py-1.5 rounded-lg text-xs font-black transition-all border ${
-                      isActive
-                        ? 'bg-blue-500 text-black border-blue-400 font-black shadow-[0_0_10px_rgba(59,130,246,0.35)]'
-                        : 'bg-transparent text-white/10 border-white/5'
-                    }`}
-                  >
-                    {level === 1 ? 'C' : level === 2 ? 'K' : level === 3 ? 'HC' : 'H'}
-                  </div>
-                );
-              })}
+              <span className="text-[9px] font-bold text-blue-400/70 w-8 text-left">PEN</span>
+              <div className="flex-1 grid grid-cols-5 gap-1">
+                {[1, 2, 3, 4, 5].map((level) => {
+                  const isActive = c1Ao >= level;
+                  const labels = ['', 'C1', 'C2', 'C3', 'HC', 'H'];
+                  return (
+                    <div
+                      key={level}
+                      className={`text-center py-1.5 rounded-lg text-xs font-black transition-all border ${
+                        isActive
+                          ? 'bg-blue-500 text-black border-blue-400 font-black shadow-[0_0_10px_rgba(59,130,246,0.35)]'
+                          : 'bg-transparent text-white/10 border-white/5'
+                      }`}
+                    >
+                      {labels[level]}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -609,12 +615,30 @@ function SpectatorDisplayContent() {
             <h2 className="text-4xl lg:text-5xl font-black tracking-tight mb-2">
               Winner Declared
             </h2>
-            <p className="text-gray-400 text-sm mb-8">Win Method: {winMethod || 'Points Advantage'}</p>
+            <div className={`border rounded-2xl p-4 mb-8 text-lg font-black uppercase tracking-wider ${
+              winMethod === 'Superior Points' 
+                ? 'bg-green-500/10 border-green-500/20 text-green-400 animate-bounce' 
+                : winMethod === 'HANSOKU'
+                  ? 'bg-red-500/10 border-red-500/20 text-red-400 animate-pulse'
+                  : 'bg-yellow-500/10 border-yellow-500/20 text-yellow-400'
+            }`}>
+              🎉 Winner by {
+                winMethod === 'Points' ? 'Points Advantage' :
+                winMethod === 'SENSHU' ? 'Senshu Advantage' :
+                winMethod === 'Superior Points' ? 'Superior Points' :
+                winMethod === 'Hantei' ? 'Hantei Decision' :
+                winMethod === 'HANSOKU' ? 'Hansoku Disqualification' :
+                winMethod === 'Kiken' ? 'Kiken (Withdrawal)' :
+                winMethod || 'Points Advantage'
+              } 🎉
+            </div>
 
             <div className={`p-8 rounded-3xl border-4 ${
-              winnerSide === 'aka' 
-                ? 'bg-[#250000] border-red-600/40 text-red-500' 
-                : 'bg-[#000525] border-blue-600/40 text-blue-400'
+              winMethod === 'Superior Points'
+                ? 'bg-[#002500] border-green-500/60 text-green-400 shadow-[0_0_40px_rgba(34,197,94,0.3)]'
+                : winnerSide === 'aka' 
+                  ? 'bg-[#250000] border-red-600/40 text-red-500' 
+                  : 'bg-[#000525] border-blue-600/40 text-blue-400'
             } mb-4`}>
               <span className="text-[10px] font-black uppercase tracking-widest opacity-60">
                 Champion

@@ -356,7 +356,7 @@ ALTER TABLE tournaments DISABLE ROW LEVEL SECURITY;
 
 -- Seed Initial Tournaments
 INSERT INTO tournaments (id, name, organizer, date, date_iso, venue, city, registration_close, registration_close_iso, status, banner_gradient, featured, discipline, medals_gold, medals_silver, medals_bronze, total_participants, total_clubs, poster_emoji, pdf_url) VALUES
-('aa5e8b4e-1a2b-3c4d-5e6f-7a8b9c0d1e2f', 'Kelab Senshi Goju-Ryu Open Karate Championship 2026', 'Kelab Senshi Goju-Ryu', '15–16 August 2026', '2026-08-15T08:00:00Z', 'Dewan Serbaguna Petaling PJ', 'Petaling Jaya, Selangor', '31 July 2026', '2026-07-31T23:59:59Z', 'Open', 'linear-gradient(135deg, #0b0f19 0%, #1a1035 40%, #2d1a00 100%)', TRUE, 'Kata, Kumite', 0, 0, 0, 0, 0, '🏆', '#'),
+('aa5e8b4e-1a2b-3c4d-5e6f-7a8b9c0d1e2f', 'Kelab Senshi Goju-Ryu Open Karate Championship 2026', 'Kelab Senshi Goju-Ryu Karate-Do', '15–16 August 2026', '2026-08-15T08:00:00Z', 'Dewan Serbaguna Petaling PJ', 'Petaling Jaya, Selangor', '31 July 2026', '2026-07-31T23:59:59Z', 'Open', 'linear-gradient(135deg, #0b0f19 0%, #1a1035 40%, #2d1a00 100%)', TRUE, 'Kata, Kumite', 0, 0, 0, 0, 0, '🏆', '#'),
 ('bb5e8b4e-1a2b-3c4d-5e6f-7a8b9c0d1e2f', 'ITOSU-RYU OPEN KARATE CHAMPIONSHIP 2026', 'Itosu-Ryu Malaysia', '11–12 June 2026', '2026-06-11T08:00:00Z', 'Pusat Komersial Anggun City, Rawang', 'Rawang, Selangor', '31 May 2026', '2026-05-31T23:59:59Z', 'Completed', 'linear-gradient(135deg, #1e3a8a 0%, #1e1b4b 50%, #3b82f6 100%)', FALSE, 'Kata, Kumite', 88, 88, 149, 481, 75, '🥇', '#')
 ON CONFLICT (id) DO NOTHING;
 

@@ -240,12 +240,25 @@ export default function PublicSpectatorHub() {
       {/* HEADER SECTION (GLASSMORPHIC STADIUM STYLE) */}
       <header className="border-b border-gray-800 bg-[#0c1322]/80 backdrop-blur-md px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sticky top-0 z-40">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl flex items-center justify-center overflow-hidden shadow-lg border border-gray-800 bg-[#0c1322]">
+          <div className="h-10 w-10 rounded-full overflow-hidden border border-white/20 bg-slate-900 shrink-0">
             <img src={logoUrl || `${basePath}/logo.jpg`} alt="Logo" className="h-full w-full object-cover" />
           </div>
-          <div>
-            <h1 className="font-black text-sm tracking-widest text-white leading-none uppercase">SENSHI LIVE HUB</h1>
-            <span className="text-[10px] text-gray-400 font-semibold block mt-1 uppercase max-w-sm sm:max-w-none truncate">{tournamentName}</span>
+          <div className="flex flex-col leading-none">
+            <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: '0.95rem', lineHeight: 1, letterSpacing: '0.01em' }}>
+              <span style={{ color: '#b91c2e' }}>Karate</span>
+              <span style={{ color: '#38bdf8' }}>Tech</span>
+            </div>
+            <div style={{ height: '1.5px', background: 'linear-gradient(90deg, #b91c2e 60%, transparent 100%)', marginTop: '1.5px', marginBottom: '1.5px', borderRadius: '1px' }} />
+            <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: '0.62rem', letterSpacing: '0.01em', color: '#818cf8', lineHeight: 1.15 }}>
+              SP SportData Solution
+            </span>
+            <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: '0.45rem', letterSpacing: '0.08em', color: '#64748b', lineHeight: 1.2, marginTop: '1.5px' }}>
+              • Precision. • Speed. • Results. •
+            </span>
+          </div>
+          <div className="border-l border-gray-800 pl-3 ml-1">
+            <h1 className="font-black text-xs tracking-widest text-white leading-none uppercase">LIVE HUB</h1>
+            <span className="text-[9px] text-gray-400 font-semibold block mt-1 uppercase max-w-sm sm:max-w-none truncate">{tournamentName}</span>
           </div>
         </div>
 

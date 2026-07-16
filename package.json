@@ -8,9 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "predeploy": "npm run build",
-    "deploy": "gh-pages -d out --nojekyll --dotfiles",
-    "deploy:hostinger": "node deploy-hostinger.js"
+    "predeploy": "node build-gh.js",
+    "deploy": "gh-pages -d out --nojekyll --dotfiles"
   },
   "dependencies": {
     "@supabase/server": "^1.2.0",

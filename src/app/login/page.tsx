@@ -9,7 +9,7 @@ import {
 import { supabase, isSupabaseConfigured, basePath } from '@/db/dbClient';
 
 export default function LoginPage() {
-  const { login, usersList, addUser } = useTournament();
+  const { login, usersList, addUser, logoUrl } = useTournament();
   
   // Tab roles: 'Admin' | 'Co-Admin' | 'Viewer'
   const [activeRole, setActiveRole] = useState<'Admin' | 'Co-Admin' | 'Viewer'>('Viewer');
@@ -272,15 +272,27 @@ export default function LoginPage() {
             
             {/* HEADER */}
             <div className="flex flex-col items-center space-y-4 text-center w-full">
-              <div className="relative group">
-                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-cyan-500 rounded-full blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200" />
-                <div className="relative h-16 w-16 rounded-full flex items-center justify-center overflow-hidden border border-white/10 bg-black shadow-inner">
-                  <img src={`${basePath}/logo.jpg`} alt="Senshi Logo" className="h-full w-full object-cover" />
+              <div className="flex flex-col items-center space-y-3">
+                <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-white/20 bg-slate-900 shrink-0">
+                  <img src={logoUrl || `${basePath}/logo.jpg`} alt="Logo" className="h-full w-full object-cover" />
+                </div>
+                <div className="flex flex-col items-center leading-none">
+                  <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: '1.15rem', lineHeight: 1, letterSpacing: '0.01em' }}>
+                    <span style={{ color: '#b91c2e' }}>Karate</span>
+                    <span style={{ color: '#38bdf8' }}>Tech</span>
+                  </div>
+                  <div style={{ height: '2px', width: '80px', background: 'linear-gradient(90deg, #b91c2e 60%, transparent 100%)', marginTop: '2px', marginBottom: '2px', borderRadius: '1px' }} />
+                  <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: '0.78rem', letterSpacing: '0.01em', color: '#818cf8', lineHeight: 1.15 }}>
+                    SP SportData Solution
+                  </span>
+                  <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: '0.58rem', letterSpacing: '0.08em', color: '#64748b', lineHeight: 1.2, marginTop: '2px' }}>
+                    • Precision. • Speed. • Results. •
+                  </span>
                 </div>
               </div>
               
-              <div className="space-y-1">
-                <h2 className="text-2xl font-black tracking-tight text-white uppercase drop-shadow-md">Senshi Goju-Ryu</h2>
+              <div className="space-y-1 mt-2">
+                <h2 className="text-lg font-black tracking-tight text-white uppercase drop-shadow-md">Senshi Goju-Ryu</h2>
                 <p className="text-xs text-indigo-300/80 font-medium tracking-widest uppercase">
                   {mode === 'signIn' ? 'Tournament Sign In' : mode === 'signUp' ? 'Create Account' : 'Password Recovery'}
                 </p>

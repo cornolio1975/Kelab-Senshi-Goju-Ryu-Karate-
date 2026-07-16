@@ -1,3 +1,4 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,700;0,800;0,900;1,700&family=Orbitron:wght@700;800;900&family=Exo+2:wght@500;600;700;800&family=Bebas+Neue&family=Rajdhani:wght@500;600;700&family=Barlow+Condensed:ital,wght@0,700;0,800;0,900;1,700&display=swap');
 @import "tailwindcss";
 
 :root {
@@ -107,8 +108,37 @@
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, sans-serif;
+  font-family: var(--font-geist-sans), 'Rajdhani', Arial, sans-serif;
+  font-feature-settings: 'rlig' 1, 'calt' 1;
   overflow-x: hidden;
+}
+
+h1, h2 {
+  font-family: 'Bebas Neue', 'Barlow Condensed', sans-serif;
+  letter-spacing: 0.03em;
+}
+
+.font-display {
+  font-family: 'Bebas Neue', 'Barlow Condensed', sans-serif;
+  letter-spacing: 0.05em;
+}
+
+.font-heading {
+  font-family: 'Rajdhani', sans-serif;
+  font-weight: 700;
+}
+
+/* Brand identity fonts */
+.font-brand {
+  font-family: 'Orbitron', 'Exo 2', sans-serif;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.font-tagline {
+  font-family: 'Exo 2', 'Rajdhani', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.15em;
 }
 
 /* Glassmorphism Header Class */
@@ -1340,4 +1370,15 @@ html.text-scale-xl {
   .pt-filters { flex-direction: column; align-items: stretch; }
   .pt-filters__count { margin-left: 0; }
   .pt-gallery { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); }
+}
+
+/* Blink animation for superior scoring points winner */
+@keyframes score-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.2; }
+  100% { opacity: 1; }
+}
+
+.animate-score-blink {
+  animation: score-blink 0.8s ease-in-out infinite;
 }

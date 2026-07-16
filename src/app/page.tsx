@@ -7,7 +7,7 @@ import {
   Tv, LogIn, ExternalLink, Activity, Info, Award, Clock, Globe, Sun, Moon
 } from 'lucide-react';
 import { db, basePath } from '@/db/dbClient';
-import { Bout, Participant, Category, Club } from '@/db/types';
+import { Bout, Participant, Category, Club, Tournament } from '@/db/types';
 
 export default function LandingPage() {
   const [mounted, setMounted] = useState(false);
@@ -28,6 +28,7 @@ export default function LandingPage() {
   const [liveBouts, setLiveBouts] = useState<Bout[]>([]);
   const [upcomingBouts, setUpcomingBouts] = useState<Bout[]>([]);
   const [medalClubs, setMedalClubs] = useState<any[]>([]);
+  const [featuredTournament, setFeaturedTournament] = useState<Tournament | null>(null);
 
   // Metadata tournament defaults
   const [tournamentName, setTournamentName] = useState('Karate Tech Open Championship 2026');
@@ -35,14 +36,14 @@ export default function LandingPage() {
   const [city, setCity] = useState('Petaling Jaya, Selangor');
   const [country, setCountry] = useState('Malaysia');
   const [eventDate, setEventDate] = useState('15 August 2026');
-  const [organizer, setOrganizer] = useState('SP Sport Data Solution');
+  const [organizer, setOrganizer] = useState('Kelab Senshi Goju-Ryu Karate-Do');
   const [wkfRules, setWkfRules] = useState('WKF Rules Edition 2026');
 
   useEffect(() => {
     setMounted(true);
     loadTournamentData();
     
-    // Retrieve custom metadata if set in localStorage
+    // Retrieve custom metadata if set in localStorage (fallback overrides)
     if (typeof window !== 'undefined') {
       const storedName = localStorage.getItem('ts_upcoming_name');
       if (storedName) setTournamentName(storedName);
@@ -57,13 +58,24 @@ export default function LandingPage() {
 
   const loadTournamentData = async () => {
     try {
-      const [bList, pList, catList, clList] = await Promise.all([
+      const [bList, pList, catList, clList, tList] = await Promise.all([
         db.bouts.list(),
         db.participants.list(),
         db.categories.list(),
-        db.clubs.list()
+        db.clubs.list(),
+        db.tournaments.list()
       ]);
 
+      // Load featured tournament and populate hero section from DB
+      const featured = tList.find(t => t.featured && !t.deleted_at) || tList.find(t => !t.deleted_at) || null;
+      if (featured) {
+        setFeaturedTournament(featured);
+        setTournamentName(featured.name);
+        setOrganizer(featured.organizer);
+        setVenue(featured.venue || venue);
+        setCity(featured.city || city);
+        if (featured.date) setEventDate(featured.date);
+      }
       const activeAthletes = pList.filter(p => !p.deleted_at);
       const completedBouts = bList.filter(b => b.status === 'Completed');
       const scheduledBouts = bList.filter(b => b.status === 'Scheduled');
@@ -130,22 +142,6 @@ export default function LandingPage() {
           }
         }
 
-        const repBouts = catBouts.filter(b => b.round_no === 98);
-        if (repBouts.length > 0) {
-          const poolA = repBouts.filter(b => b.bout_no < 20);
-          const finalA = poolA.length > 0 ? poolA.reduce((prev, curr) => curr.bout_no > prev.bout_no ? curr : prev) : null;
-          if (finalA && finalA.status === 'Completed' && finalA.winner_id) {
-            const bWinner = activeAthletes.find(p => p.id === finalA.winner_id);
-            if (bWinner?.club_id && medalCount[bWinner.club_id]) medalCount[bWinner.club_id].bronze += 1;
-          }
-
-          const poolB = repBouts.filter(b => b.bout_no >= 20);
-          const finalB = poolB.length > 0 ? poolB.reduce((prev, curr) => curr.bout_no > prev.bout_no ? curr : prev) : null;
-          if (finalB && finalB.status === 'Completed' && finalB.winner_id) {
-            const bWinner = activeAthletes.find(p => p.id === finalB.winner_id);
-            if (bWinner?.club_id && medalCount[bWinner.club_id]) medalCount[bWinner.club_id].bronze += 1;
-          }
-        }
       });
 
       const sortedClubs = Object.values(medalCount)
@@ -177,12 +173,26 @@ export default function LandingPage() {
       {/* 1. Header Bar */}
       <header className={`relative z-10 border-b ${theme === 'dark' ? 'border-white/5 bg-[#0b0f19]' : 'border-slate-200 bg-white'} px-6 py-4 flex items-center justify-between`}>
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full overflow-hidden border border-white/10 bg-slate-900 shrink-0">
+          <div className="h-16 w-16 rounded-full overflow-hidden border-2 border-white/20 bg-slate-900 shrink-0">
             <img src={`${basePath}/logo.jpg`} alt="Tournament Logo" className="h-full w-full object-cover" />
           </div>
-          <div>
-            <h1 className="text-sm font-black tracking-wider uppercase leading-none">KARATE TECH</h1>
-            <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">SP SPORT DATA SOLUTION</span>
+          {/* Brand Logo — KarateTech */}
+          <div className="flex flex-col leading-none">
+            {/* Line 1: KarateTech two-tone */}
+            <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: '1.15rem', lineHeight: 1, letterSpacing: '0.01em' }}>
+              <span style={{ color: '#b91c2e' }}>Karate</span>
+              <span style={{ color: '#38bdf8' }}>Tech</span>
+            </div>
+            {/* Thin crimson divider */}
+            <div style={{ height: '2px', background: 'linear-gradient(90deg, #b91c2e 60%, transparent 100%)', marginTop: '2px', marginBottom: '2px', borderRadius: '1px' }} />
+            {/* Line 2: SP Sport Data Solution */}
+            <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: '0.78rem', letterSpacing: '0.01em', color: theme === 'dark' ? '#818cf8' : '#1a2744', lineHeight: 1.15 }}>
+              SP SportData Solution
+            </span>
+            {/* Line 3: Tagline */}
+            <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: '0.58rem', letterSpacing: '0.08em', color: theme === 'dark' ? '#64748b' : '#64748b', lineHeight: 1.2, marginTop: '2px' }}>
+              • Precision. • Speed. • Results. •
+            </span>
           </div>
         </div>
 
@@ -239,36 +249,79 @@ export default function LandingPage() {
           <div className="absolute top-[20%] right-[-10%] w-[35%] h-[35%] bg-indigo-500/10 rounded-full blur-[130px] pointer-events-none" />
 
           <div className="max-w-3xl space-y-6">
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-bold text-indigo-400 uppercase tracking-widest">
-              <Flame size={12} fill="currentColor" />
-              {wkfRules}
-            </span>
+            {/* Status + WKF Badge */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-xs font-bold text-indigo-400 uppercase tracking-widest">
+                <Flame size={12} fill="currentColor" />
+                {wkfRules}
+              </span>
+              {featuredTournament && (
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest border ${
+                  featuredTournament.status === 'Open' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400' :
+                  featuredTournament.status === 'Completed' ? 'bg-slate-500/10 border-slate-500/30 text-slate-400' :
+                  'bg-yellow-500/10 border-yellow-500/30 text-yellow-400'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full inline-block ${
+                    featuredTournament.status === 'Open' ? 'bg-emerald-400 animate-pulse' :
+                    featuredTournament.status === 'Completed' ? 'bg-slate-400' :
+                    'bg-yellow-400 animate-pulse'
+                  }`} />
+                  {featuredTournament.status}
+                </span>
+              )}
+              {featuredTournament?.featured && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest border bg-yellow-500/10 border-yellow-500/30 text-yellow-400">
+                  ★ Featured
+                </span>
+              )}
+            </div>
 
-            <h2 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight uppercase">
+            <h2 className="font-display text-2xl sm:text-4xl font-black tracking-widest leading-snug uppercase">
               {tournamentName}
             </h2>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-bold opacity-80 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-bold opacity-80 pt-2">
               <div className="flex items-center gap-2">
-                <MapPin size={16} className="text-indigo-400" />
-                <span>{venue}, {city}, {country}</span>
+                <MapPin size={16} className="text-indigo-400 shrink-0" />
+                <span>{venue}{city ? `, ${city}` : ''}{country ? `, ${country}` : ''}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Calendar size={16} className="text-indigo-400" />
-                <span>Dates: {eventDate}</span>
+                <Calendar size={16} className="text-indigo-400 shrink-0" />
+                <span>Event Date: {eventDate}</span>
               </div>
               <div className="flex items-center gap-2">
-                <Users size={16} className="text-indigo-400" />
+                <Users size={16} className="text-indigo-400 shrink-0" />
                 <span>Organizer: {organizer}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={16} className="text-indigo-400" />
-                <span>Powered by Tournament Management System</span>
+              {featuredTournament?.registration_close && (
+                <div className="flex items-center gap-2">
+                  <Clock size={16} className="text-yellow-400 shrink-0" />
+                  <span>Registration Closes: {featuredTournament.registration_close}</span>
+                </div>
+              )}
+              {featuredTournament?.discipline && (
+                <div className="flex items-center gap-2">
+                  <Trophy size={16} className="text-indigo-400 shrink-0" />
+                  <span>Discipline: {featuredTournament.discipline}</span>
+                </div>
+              )}
+              {(featuredTournament?.total_participants ?? 0) > 0 && (
+                <div className="flex items-center gap-2">
+                  <Activity size={16} className="text-emerald-400 shrink-0" />
+                  <span>{featuredTournament!.total_participants} Participants · {featuredTournament!.total_clubs} Clubs</span>
+                </div>
+              )}
+              <div className="flex items-center gap-2 col-span-full">
+                <ShieldCheck size={16} className="text-indigo-400 shrink-0" />
+                <span>
+                  Developed by SP SportData Solution<br />
+                  (Professional Karate Tournament Management System)
+                </span>
               </div>
             </div>
 
             {/* Quick Action Navigation Grid */}
-            <div className="flex flex-wrap gap-3 pt-6">
+            <div className="flex flex-wrap gap-3 pt-4">
               <Link href="/public/register" className="px-5 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-indigo-900/20">
                 Register Participant
               </Link>
@@ -465,7 +518,7 @@ export default function LandingPage() {
               Karate Tech
             </h4>
             <p className="max-w-md leading-relaxed">
-              Precision Karate Tournament Management System. Automated Single Elimination and Repechage grids fully compliant with WKF rules.
+              Precision Karate Tournament Management System. Automated Single Elimination grids fully compliant with WKF rules.
             </p>
             <div className="flex gap-4 font-bold">
               <a href="#" className="hover:underline">Privacy Policy</a>
@@ -476,8 +529,10 @@ export default function LandingPage() {
 
           <div className="flex flex-col md:items-end gap-1.5 md:text-right">
             <span className={`font-bold ${theme === 'dark' ? 'text-white' : 'text-slate-900'}`}>© 2026 KarateTech</span>
-            <span>Developed by <span className="font-semibold">SP Sport Data Solution</span></span>
-            <span>Professional Karate Tournament Management System</span>
+            <span>
+              Developed by <span className="font-semibold">SP SportData Solution</span><br />
+              (Professional Karate Tournament Management System)
+            </span>
             <span>All Rights Reserved.</span>
             <span className="text-[10px] mt-1">
               Contact: <a href="mailto:karatetech@gmail.com" className="text-indigo-400 hover:underline">karatetech@gmail.com</a>

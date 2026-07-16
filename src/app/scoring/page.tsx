@@ -1,22 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useTournament } from '@/context/TournamentContext';
 import { db, supabase } from '@/db/dbClient';
 import { Category, Bout, Participant } from '@/db/types';
 import { Play, Square, RotateCcw, ChevronDown, Maximize2, Minimize2, Zap } from 'lucide-react';
 
-/* ─── Penalty types ──────────────────────────────────────────── */
-type PenaltyType = 'C' | 'K' | 'HC' | 'H';
-interface Penalties { C: number; K: number; HC: number; H: number; }
-const emptyPenalties = (): Penalties => ({ C: 0, K: 0, HC: 0, H: 0 });
-
-/* Penalty gives opponent points: K→+1, HC→+2, H→Disqualified */
-const penaltyPts: Record<PenaltyType, number> = { C: 0, K: 1, HC: 2, H: 0 };
 const MATCH_DURATION_SECS = 120; // 2 minutes default
 
 export default function ScoringPage() {
   const { tournamentName, logoUrl } = useTournament();
+  const searchParams = useSearchParams();
 
   /* ── Data lists ── */
   const [categories, setCategories] = useState<Category[]>([]);
@@ -31,16 +26,46 @@ export default function ScoringPage() {
   /* ── Live scoring state ── */
   const [scoreAo, setScoreAo] = useState(0);   // AO = Blue
   const [scoreAka, setScoreAka] = useState(0); // AKA = Red
-  const [penAo, setPenAo] = useState<Penalties>(emptyPenalties());
-  const [penAka, setPenAka] = useState<Penalties>(emptyPenalties());
+  const [c1Ao, setC1Ao] = useState<number>(0);
+  const [c1Aka, setC1Aka] = useState<number>(0);
   const [senshuAo, setSenshuAo] = useState(false);
   const [senshuAka, setSenshuAka] = useState(false);
+  const [firstScorer, setFirstScorer] = useState<'aka' | 'ao' | 'none' | null>(null);
+  const [stoppageScorers, setStoppageScorers] = useState<('aka' | 'ao')[]>([]);
+
+  // Advanced scoring history and decision state
+  const [historyAo, setHistoryAo] = useState<number[]>([]);
+  const [historyAka, setHistoryAka] = useState<number[]>([]);
+  const [superiorWinner, setSuperiorWinner] = useState<'ao' | 'aka' | null>(null);
+  const [blinkWinner, setBlinkWinner] = useState<'ao' | 'aka' | null>(null);
+  const [showSuperiorPopup, setShowSuperiorPopup] = useState(false);
+
+  // Derive Senshu state from firstScorer
+  useEffect(() => {
+    if (firstScorer === 'aka') {
+      setSenshuAka(true);
+      setSenshuAo(false);
+    } else if (firstScorer === 'ao') {
+      setSenshuAo(true);
+      setSenshuAka(false);
+    } else {
+      setSenshuAka(false);
+      setSenshuAo(false);
+    }
+  }, [firstScorer]);
 
   /* ── Timer ── */
   const [timeLeft, setTimeLeft] = useState(MATCH_DURATION_SECS);
   const [timerRunning, setTimerRunning] = useState(false);
   const [matchDuration, setMatchDuration] = useState(MATCH_DURATION_SECS);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Clear stoppageScorers when the timer starts running
+  useEffect(() => {
+    if (timerRunning) {
+      setStoppageScorers([]);
+    }
+  }, [timerRunning]);
 
   /* ── UI ── */
   const [fullscreen, setFullscreen] = useState(false);
@@ -53,16 +78,20 @@ export default function ScoringPage() {
   /* Load data */
   useEffect(() => {
     if (!mounted) return;
+    const catParam = searchParams.get('cat');
     Promise.all([db.categories.list(), db.bouts.list(), db.participants.list()])
       .then(([cats, bts, parts]) => {
         setCategories(cats);
         setBouts(bts);
         setParticipants(parts);
-        // Auto-select first category with bouts
-        const firstCat = cats.find(c => bts.some(b => b.category_id === c.id));
-        if (firstCat) {
-          setSelectedCatId(firstCat.id);
-          const firstBout = bts.find(b => b.category_id === firstCat.id);
+        // If a category was passed via ?cat=, prefer it; else fall back to first with bouts
+        const preferredCat = catParam
+          ? cats.find(c => c.id === catParam && bts.some(b => b.category_id === c.id))
+          : null;
+        const targetCat = preferredCat || cats.find(c => bts.some(b => b.category_id === c.id));
+        if (targetCat) {
+          setSelectedCatId(targetCat.id);
+          const firstBout = bts.find(b => b.category_id === targetCat.id);
           if (firstBout) setSelectedBoutId(firstBout.id);
         }
       });
@@ -81,22 +110,105 @@ export default function ScoringPage() {
     if (currentBout) {
       setScoreAo(currentBout.score_a ?? 0);
       setScoreAka(currentBout.score_b ?? 0);
-      setPenAo(emptyPenalties());
-      setPenAka(emptyPenalties());
-      setSenshuAo(false);
-      setSenshuAka(false);
+      setC1Ao(currentBout.penalties_c1_b ? parseInt(currentBout.penalties_c1_b) || 0 : 0);
+      setC1Aka(currentBout.penalties_c1_a ? parseInt(currentBout.penalties_c1_a) || 0 : 0);
+
+      const sAo = currentBout.senshu_b ?? false;
+      const sAka = currentBout.senshu_a ?? false;
+      setSenshuAo(sAo);
+      setSenshuAka(sAka);
+      
+      const savedPointsAo = currentBout.points_ao_history ? currentBout.points_ao_history.split(',').map(Number).filter(Boolean) : [];
+      const savedPointsAka = currentBout.points_aka_history ? currentBout.points_aka_history.split(',').map(Number).filter(Boolean) : [];
+      setHistoryAo(savedPointsAo);
+      setHistoryAka(savedPointsAka);
+
+      if (sAo) {
+        setFirstScorer('ao');
+      } else if (sAka) {
+        setFirstScorer('aka');
+      } else {
+        if (savedPointsAo.length > 0 && savedPointsAka.length > 0) {
+          setFirstScorer('none');
+        } else {
+          setFirstScorer(null);
+        }
+      }
+      setStoppageScorers([]);
+
       setWinner(null);
       setWinMethod('');
+      setSuperiorWinner(null);
+      setBlinkWinner(null);
+      setShowSuperiorPopup(false);
       resetTimer();
     }
   }, [selectedBoutId]);
+
+  /* ── Tiebreaker calculation helpers ── */
+  const getWinnerBySuperiorPoints = (histAo: number[], histAka: number[]): 'ao' | 'aka' | 'draw' => {
+    // 1. Compare number of 3-point scores (Ippon)
+    const countAo3 = histAo.filter(x => x === 3).length;
+    const countAka3 = histAka.filter(x => x === 3).length;
+    if (countAo3 !== countAka3) return countAo3 > countAka3 ? 'ao' : 'aka';
+
+    // 2. Compare number of 2-point scores (Waza-ari)
+    const countAo2 = histAo.filter(x => x === 2).length;
+    const countAka2 = histAka.filter(x => x === 2).length;
+    if (countAo2 !== countAka2) return countAo2 > countAka2 ? 'ao' : 'aka';
+
+    // 3. Compare number of 1-point scores (Yuko)
+    const countAo1 = histAo.filter(x => x === 1).length;
+    const countAka1 = histAka.filter(x => x === 1).length;
+    if (countAo1 !== countAka1) return countAo1 > countAka1 ? 'ao' : 'aka';
+
+    return 'draw';
+  };
+
+  const playNotificationSound = () => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
+      
+      // First beep (D5)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.frequency.value = 587.33;
+      gain1.gain.setValueAtTime(0, ctx.currentTime);
+      gain1.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+      gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc1.start(ctx.currentTime);
+      osc1.stop(ctx.currentTime + 0.35);
+
+      // Second beep (A5)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.frequency.value = 880;
+      gain2.gain.setValueAtTime(0, ctx.currentTime + 0.25);
+      gain2.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.3);
+      gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.55);
+      osc2.start(ctx.currentTime + 0.25);
+      osc2.stop(ctx.currentTime + 0.6);
+    } catch (e) {
+      console.warn('Could not play notification sound:', e);
+    }
+  };
 
   /* ── Timer control ── */
   const resetTimer = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     setTimerRunning(false);
     setTimeLeft(matchDuration);
+    setSuperiorWinner(null);
+    setBlinkWinner(null);
+    setShowSuperiorPopup(false);
   }, [matchDuration]);
+
 
   const startTimer = () => {
     if (timerRunning || timeLeft <= 0) return;
@@ -132,37 +244,122 @@ export default function ScoringPage() {
 
   const addScore = (side: Side, pts: number) => {
     if (winner) return;
+    let finalAo = scoreAo;
+    let finalAka = scoreAka;
+
     if (side === 'ao') {
       const newScore = Math.max(0, scoreAo + pts);
       setScoreAo(newScore);
-      if (!senshuAo && newScore > 0 && scoreAka === 0) setSenshuAo(true);
+      setHistoryAo(prev => [...prev, pts]);
+      finalAo = newScore;
     } else {
       const newScore = Math.max(0, scoreAka + pts);
       setScoreAka(newScore);
-      if (!senshuAka && newScore > 0 && scoreAo === 0) setSenshuAka(true);
+      setHistoryAka(prev => [...prev, pts]);
+      finalAka = newScore;
     }
-  };
 
-  const addPenalty = (side: Side, type: PenaltyType) => {
-    if (winner) return;
-    if (side === 'ao') {
-      const newPen = { ...penAo, [type]: penAo[type] + 1 };
-      setPenAo(newPen);
-      if (type === 'H') { declareWinner('aka', 'Hansoku (Disqualification)'); return; }
-      const pts = penaltyPts[type];
-      if (pts > 0) setScoreAka(s => s + pts);
-    } else {
-      const newPen = { ...penAka, [type]: penAka[type] + 1 };
-      setPenAka(newPen);
-      if (type === 'H') { declareWinner('ao', 'Hansoku (Disqualification)'); return; }
-      const pts = penaltyPts[type];
-      if (pts > 0) setScoreAo(s => s + pts);
+    // Determine Senshu state based on current scores and custom rules
+    if (pts > 0) {
+      if (!timerRunning) {
+        setStoppageScorers((prev) => {
+          const next = prev.includes(side) ? prev : [...prev, side];
+          if (next.includes('ao') && next.includes('aka')) {
+            // Rule 4: Both fighters score in the same stoppage sequence -> Senshu remains OFF
+            setFirstScorer('none');
+          } else if (firstScorer === null || firstScorer === 'none') {
+            // Only one scored in this stoppage sequence and Senshu was OFF -> award Senshu to them
+            setFirstScorer(side);
+          }
+          return next;
+        });
+      } else {
+        // Active play: immediately award Senshu to the scorer if Senshu was OFF
+        if (firstScorer === null || firstScorer === 'none') {
+          setFirstScorer(side);
+        }
+      }
     }
   };
 
   const undoScore = (side: Side, pts: number) => {
-    if (side === 'ao') setScoreAo(s => Math.max(0, s - pts));
-    else setScoreAka(s => Math.max(0, s - pts));
+    if (winner) return;
+    let finalAo = scoreAo;
+    let finalAka = scoreAka;
+
+    if (side === 'ao') {
+      finalAo = Math.max(0, scoreAo - pts);
+      setScoreAo(finalAo);
+      setHistoryAo(prev => {
+        const next = [...prev];
+        let p = pts;
+        while (p > 0 && next.length > 0) {
+          const last = next[next.length - 1];
+          if (last <= p) {
+            p -= last;
+            next.pop();
+          } else {
+            next[next.length - 1] = last - p;
+            p = 0;
+          }
+        }
+        return next;
+      });
+    } else {
+      finalAka = Math.max(0, scoreAka - pts);
+      setScoreAka(finalAka);
+      setHistoryAka(prev => {
+        const next = [...prev];
+        let p = pts;
+        while (p > 0 && next.length > 0) {
+          const last = next[next.length - 1];
+          if (last <= p) {
+            p -= last;
+            next.pop();
+          } else {
+            next[next.length - 1] = last - p;
+            p = 0;
+          }
+        }
+        return next;
+      });
+    }
+
+    // Determine Senshu state after score subtraction
+    if (finalAo > 0 && finalAka === 0) {
+      setFirstScorer('ao');
+      setStoppageScorers((prev) => prev.filter(s => s !== 'aka'));
+    } else if (finalAka > 0 && finalAo === 0) {
+      setFirstScorer('aka');
+      setStoppageScorers((prev) => prev.filter(s => s !== 'ao'));
+    } else if (finalAo === 0 && finalAka === 0) {
+      setFirstScorer(null);
+      setStoppageScorers([]);
+    } else {
+      // Both have scores > 0 after subtraction
+      if (side === 'ao' && finalAo === 0) {
+        setStoppageScorers((prev) => prev.filter(s => s !== 'ao'));
+      } else if (side === 'aka' && finalAka === 0) {
+        setStoppageScorers((prev) => prev.filter(s => s !== 'aka'));
+      }
+    }
+  };
+
+  const addPenalty = (side: Side, level: number) => {
+    if (winner) return;
+    const isAo = side === 'ao';
+    let nextVal = 0;
+    if (isAo) {
+      nextVal = c1Ao === level ? Math.max(0, level - 1) : level;
+      setC1Ao(nextVal);
+    } else {
+      nextVal = c1Aka === level ? Math.max(0, level - 1) : level;
+      setC1Aka(nextVal);
+    }
+
+    if (nextVal === 5) {
+      declareWinner(isAo ? 'aka' : 'ao', 'Hansoku (Disqualification)');
+    }
   };
 
   const declareWinner = (side: Side, method: string) => {
@@ -178,7 +375,23 @@ export default function ScoringPage() {
     if (!winnerId) return;
     setSaving(true);
     try {
-      await db.bouts.updateBoutResult(selectedBoutId, winnerId, scoreAo, scoreAka);
+      await db.bouts.updateBoutState(selectedBoutId, {
+        status: 'Completed',
+        winner_id: winnerId,
+        score_a: scoreAo,
+        score_b: scoreAka,
+        senshu_a: senshuAka,
+        senshu_b: senshuAo,
+        penalties_c1_a: String(c1Aka),
+        penalties_c1_b: String(c1Ao),
+        penalties_c2_a: '0',
+        penalties_c2_b: '0',
+        penalties_c3_a: '0',
+        penalties_c3_b: '0',
+        victory_method: winMethod,
+        points_ao_history: historyAo.join(','),
+        points_aka_history: historyAka.join(',')
+      });
       // Refresh bouts
       const updated = await db.bouts.list();
       setBouts(updated);
@@ -188,6 +401,38 @@ export default function ScoringPage() {
       setSaving(false);
     }
   };
+
+  // Automatic end of match decision when timer hits 0
+  useEffect(() => {
+    if (timeLeft === 0 && !winner && selectedBoutId) {
+      // 1. If one fighter has a higher score, they win normally
+      if (scoreAo > scoreAka) {
+        declareWinner('ao', 'Score');
+      } else if (scoreAka > scoreAo) {
+        declareWinner('aka', 'Score');
+      } else {
+        // 2. Same score -> compare highest scoring techniques
+        const superior = getWinnerBySuperiorPoints(historyAo, historyAka);
+        if (superior === 'ao' || superior === 'aka') {
+          setSuperiorWinner(superior);
+          setBlinkWinner(superior);
+          setShowSuperiorPopup(true);
+          playNotificationSound();
+          declareWinner(superior, 'Superior Points');
+        } else {
+          // 3. Same techniques -> check Senshu
+          if (senshuAo) {
+            declareWinner('ao', 'Senshu');
+          } else if (senshuAka) {
+            declareWinner('aka', 'Senshu');
+          } else {
+            // Equal on all counts -> Hantei (must be manually decided)
+          }
+        }
+      }
+    }
+  }, [timeLeft, winner, selectedBoutId, scoreAo, scoreAka, historyAo, historyAka, senshuAo, senshuAka]);
+
 
   /* ── Real-time Supabase subscription ── */
   useEffect(() => {
@@ -216,55 +461,38 @@ export default function ScoringPage() {
     return `${m}:${sec.toString().padStart(2, '0')}`;
   };
 
-  /* Penalty columns displayed: Chukoku(C)=1, Keikoku(K)=2, Hansoku Chui(HC), Hansoku(H) */
-  const PEN_COLS: { key: PenaltyType; label: string }[] = [
-    { key: 'C', label: '1' },
-    { key: 'K', label: '2' },
-    { key: 'HC', label: '3' },
-    { key: 'HC', label: 'HC' },
-    { key: 'H', label: 'H' },
-  ];
-
   const PenDot = ({ filled }: { filled: boolean }) => (
     <div className={`w-3.5 h-3.5 rounded-full border ${filled ? 'bg-yellow-400 border-yellow-300' : 'border-white/30 bg-transparent'}`} />
   );
 
   const PenaltyRow = ({
-    side, penalties, color
+    side, val, color
   }: {
-    side: Side; penalties: Penalties; color: 'aka' | 'ao'
+    side: Side; val: number; color: 'aka' | 'ao'
   }) => {
     const accentColor = color === 'aka' ? 'text-red-400' : 'text-[#00d4ff]';
     return (
       <div className="flex items-center h-10 px-6 gap-0" style={{ background: color === 'aka' ? '#1a0505' : '#050f1a' }}>
-        <button
-          onClick={() => { if (!winner) { /* toggle warning */ } }}
-          className={`text-sm font-black uppercase tracking-widest mr-8 cursor-pointer ${accentColor}`}
+        <span
+          className={`text-xs font-black uppercase tracking-widest mr-8 ${accentColor}`}
           style={{ letterSpacing: '0.15em' }}
         >
-          WARNING
-        </button>
-        {/* Penalty columns: 1 2 3 HC H */}
-        {(['C', 'K', 'HC', 'HC', 'H'] as PenaltyType[]).map((key, i) => {
-          const label = ['1', '2', '3', 'HC', 'H'][i];
-          const val = penalties[key];
-          const filled = val > i || (key === 'HC' && i === 3 && val >= 1) || (key === 'H' && val >= 1);
+          PENALTIES
+        </span>
+        {/* Penalty columns: C1 C2 C3 HC H */}
+        {[1, 2, 3, 4, 5].map((level) => {
+          const label = ['C1', 'C2', 'C3', 'HC', 'H'][level - 1];
+          const filled = val >= level;
           return (
             <button
-              key={`${key}-${i}`}
-              onClick={() => addPenalty(side, key)}
+              key={level}
+              onClick={() => addPenalty(side, level)}
               disabled={!!winner}
               className="flex flex-col items-center justify-center w-16 h-full border-l border-white/10 cursor-pointer hover:bg-white/5 disabled:cursor-default transition"
               title={`${side.toUpperCase()} Penalty: ${label}`}
             >
               <span className="text-[10px] text-white/30 font-bold mb-0.5">{label}</span>
-              <PenDot filled={val > 0 && (
-                (label === '1' && val >= 1) ||
-                (label === '2' && val >= 2) ||
-                (label === '3' && val >= 3) ||
-                (label === 'HC' && key === 'HC' && val >= 1) ||
-                (label === 'H' && val >= 1)
-              )} />
+              <PenDot filled={filled} />
             </button>
           );
         })}
@@ -385,7 +613,18 @@ export default function ScoringPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
 
         {/* ── AKA SIDE (TOP / RED) ── */}
-        <div className="flex-1 flex flex-col" style={{ background: 'linear-gradient(180deg, #1a0000 0%, #0d0000 100%)' }}>
+        <div 
+          className={`flex-1 flex flex-col transition-all duration-300 ${
+            blinkWinner === 'aka' ? 'animate-score-blink' : ''
+          } ${
+            superiorWinner === 'aka' ? 'border-4 border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.4)]' : ''
+          }`} 
+          style={{ 
+            background: superiorWinner === 'aka' 
+              ? 'linear-gradient(180deg, #022c22 0%, #064e3b 100%)' 
+              : 'linear-gradient(180deg, #1a0000 0%, #0d0000 100%)' 
+          }}
+        >
           {/* Name + Score Row */}
           <div className="flex-1 flex items-center justify-between px-8 py-3 relative">
             {/* AKA label + name */}
@@ -400,7 +639,8 @@ export default function ScoringPage() {
                 {akaComp?.full_name || '— Competitor —'}
               </span>
               {senshuAka && (
-                <span className="mt-1 inline-block bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse w-fit">
+                <span className="mt-1 bg-blue-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-widest animate-pulse w-fit border border-blue-400 shadow-[0_0_10px_rgba(37,99,235,0.4)] flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
                   先取 SENSHU
                 </span>
               )}
@@ -442,16 +682,27 @@ export default function ScoringPage() {
           </div>
 
           {/* AKA Penalty row */}
-          <PenaltyRow side="aka" penalties={penAka} color="aka" />
+          <PenaltyRow side="aka" val={c1Aka} color="aka" />
         </div>
 
         {/* ── DIVIDER LINE ── */}
         <div className="h-px bg-white/10 shrink-0" />
 
         {/* ── AO SIDE (BOTTOM / BLUE) ── */}
-        <div className="flex-1 flex flex-col" style={{ background: 'linear-gradient(180deg, #00001a 0%, #000d1a 100%)' }}>
+        <div 
+          className={`flex-1 flex flex-col transition-all duration-300 ${
+            blinkWinner === 'ao' ? 'animate-score-blink' : ''
+          } ${
+            superiorWinner === 'ao' ? 'border-4 border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.4)]' : ''
+          }`} 
+          style={{ 
+            background: superiorWinner === 'ao' 
+              ? 'linear-gradient(180deg, #022c22 0%, #064e3b 100%)' 
+              : 'linear-gradient(180deg, #00001a 0%, #000d1a 100%)' 
+          }}
+        >
           {/* AO Penalty row (at top of AO section) */}
-          <PenaltyRow side="ao" penalties={penAo} color="ao" />
+          <PenaltyRow side="ao" val={c1Ao} color="ao" />
 
           {/* Name + Score Row */}
           <div className="flex-1 flex items-center justify-between px-8 py-3 relative">
@@ -467,7 +718,8 @@ export default function ScoringPage() {
                 {aoComp?.full_name || '— Competitor —'}
               </span>
               {senshuAo && (
-                <span className="mt-1 inline-block bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-widest animate-pulse w-fit">
+                <span className="mt-1 bg-blue-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-widest animate-pulse w-fit border border-blue-400 shadow-[0_0_10px_rgba(37,99,235,0.4)] flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z"/></svg>
                   先取 SENSHU
                 </span>
               )}
@@ -515,18 +767,27 @@ export default function ScoringPage() {
           <div className="flex flex-col items-center justify-center px-6 border-r border-white/10 h-full" style={{ minWidth: '200px' }}>
             <div className="flex items-center gap-3">
               {/* Tournament logo */}
-              <div className="w-12 h-12 rounded-lg overflow-hidden border border-white/20 shrink-0 bg-white/5">
+              <div className="w-12 h-12 rounded-full overflow-hidden border border-white/20 shrink-0 bg-white/5">
                 <img
                   src={logoUrl}
-                  alt="KARATE TECH"
+                  alt="Logo"
                   className="w-full h-full object-cover"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                 />
               </div>
-              {/* Brand text */}
-              <div className="flex flex-col">
-                <span className="font-black text-white leading-none" style={{ fontSize: '1.05rem', letterSpacing: '0.12em' }}>KARATE</span>
-                <span className="font-black leading-none" style={{ fontSize: '1.05rem', letterSpacing: '0.12em', color: '#f59e0b' }}>TECH</span>
+              {/* Brand Logo — KarateTech */}
+              <div className="flex flex-col leading-none">
+                <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: '0.95rem', lineHeight: 1, letterSpacing: '0.01em' }}>
+                  <span style={{ color: '#b91c2e' }}>Karate</span>
+                  <span style={{ color: '#38bdf8' }}>Tech</span>
+                </div>
+                <div style={{ height: '1.5px', background: 'linear-gradient(90deg, #b91c2e 60%, transparent 100%)', marginTop: '1.5px', marginBottom: '1.5px', borderRadius: '1px' }} />
+                <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: '0.62rem', letterSpacing: '0.01em', color: '#818cf8', lineHeight: 1.15 }}>
+                  SP SportData Solution
+                </span>
+                <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: '0.45rem', letterSpacing: '0.08em', color: '#64748b', lineHeight: 1.2, marginTop: '1.5px' }}>
+                  • Precision. • Speed. • Results. •
+                </span>
               </div>
             </div>
           </div>
@@ -579,6 +840,52 @@ export default function ScoringPage() {
           </div>
         </div>
       </div>
+
+      {/* ══ SUPERIOR POINTS WINNER MODAL/POPUP ══ */}
+      {showSuperiorPopup && (
+        <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="bg-[#111827] border border-emerald-500 rounded-2xl p-8 max-w-md w-full mx-4 shadow-[0_0_50px_rgba(16,185,129,0.3)] text-center animate-scale-in">
+            <div className="w-20 h-20 bg-emerald-500/10 border border-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <span className="text-4xl">🏆</span>
+            </div>
+            <h3 className="text-2xl font-black text-emerald-400 uppercase tracking-wide mb-2">
+              Winner by Superior Points
+            </h3>
+            <p className="text-sm text-gray-300 mb-6">
+              The match ended in a tie, and the decision was automatically determined by WKF Superior Scoring Points rules.
+            </p>
+            <div className="bg-black/40 rounded-xl p-4 mb-6 border border-white/5">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-left">
+                  <div className="text-[10px] text-gray-400 font-bold uppercase">AKA ({akaComp?.full_name?.split(' ')[0] || 'Aka'})</div>
+                  <div className="text-xs text-white mt-1">
+                    Ippons (3): {historyAka.filter(x => x === 3).length} <br />
+                    Waza-aris (2): {historyAka.filter(x => x === 2).length} <br />
+                    Yukos (1): {historyAka.filter(x => x === 1).length}
+                  </div>
+                </div>
+                <div className="text-left border-l border-white/10 pl-4">
+                  <div className="text-[10px] text-gray-400 font-bold uppercase">AO ({aoComp?.full_name?.split(' ')[0] || 'Ao'})</div>
+                  <div className="text-xs text-white mt-1">
+                    Ippons (3): {historyAo.filter(x => x === 3).length} <br />
+                    Waza-aris (2): {historyAo.filter(x => x === 2).length} <br />
+                    Yukos (1): {historyAo.filter(x => x === 1).length}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                setShowSuperiorPopup(false);
+                setBlinkWinner(null); // Stop blinking after dismiss
+              }}
+              className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-widest rounded-xl transition duration-200 shadow-lg shadow-emerald-700/30 cursor-pointer active:scale-95 animate-pulse"
+            >
+              Acknowledge
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

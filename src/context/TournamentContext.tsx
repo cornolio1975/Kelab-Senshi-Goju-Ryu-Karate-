@@ -211,7 +211,7 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
       }
       setUsersListState(initialList);
 
-      // Async fetch users from Supabase if available
+      // Async fetch users and tournament from Supabase if available
       if (supabase) {
         supabase
           .from('system_users')
@@ -230,6 +230,40 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
               localStorage.setItem('ts_users_list', JSON.stringify(mapped));
             } else if (error) {
               console.warn('Could not load users from Supabase, using local fallback:', error.message);
+            }
+          });
+
+        supabase
+          .from('tournaments')
+          .select('*')
+          .then(({ data, error }) => {
+            if (!error && data && data.length > 0) {
+              const featured = data.find((t: any) => t.featured && !t.deleted_at) || data.find((t: any) => !t.deleted_at);
+              if (featured) {
+                setTournamentNameState(featured.name);
+                localStorage.setItem('ts_tournament_name', featured.name);
+                
+                // Keep local storage variables in sync for settings page
+                localStorage.setItem('ts_upcoming_name', featured.name);
+                if (featured.venue) localStorage.setItem('ts_upcoming_venue', featured.venue);
+                if (featured.city) localStorage.setItem('ts_upcoming_city', featured.city);
+                
+                const dateIsoStr = featured.date_iso ? new Date(featured.date_iso).toISOString().split('T')[0] : '';
+                if (dateIsoStr) {
+                  localStorage.setItem('ts_upcoming_date', dateIsoStr);
+                } else if (featured.date) {
+                  localStorage.setItem('ts_upcoming_date', featured.date);
+                }
+                
+                const regCloseIsoStr = featured.registration_close_iso ? new Date(featured.registration_close_iso).toISOString().split('T')[0] : '';
+                if (regCloseIsoStr) {
+                  localStorage.setItem('ts_upcoming_reg_close', regCloseIsoStr);
+                } else if (featured.registration_close) {
+                  localStorage.setItem('ts_upcoming_reg_close', featured.registration_close);
+                }
+              }
+            } else if (error) {
+              console.warn('Could not load tournament details from Supabase:', error.message);
             }
           });
       }
@@ -332,6 +366,22 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
     setTournamentNameState(name);
     if (typeof window !== 'undefined') {
       localStorage.setItem('ts_tournament_name', name);
+    }
+    if (supabase) {
+      const client = supabase;
+      client
+        .from('tournaments')
+        .select('*')
+        .then(({ data }) => {
+          const featured = data?.find((t: any) => t.featured && !t.deleted_at) || data?.find((t: any) => !t.deleted_at);
+          if (featured) {
+            client
+              .from('tournaments')
+              .update({ name })
+              .eq('id', featured.id)
+              .then(() => {});
+          }
+        });
     }
   };
 

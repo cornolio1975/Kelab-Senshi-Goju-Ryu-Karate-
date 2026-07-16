@@ -147,6 +147,18 @@ export default function SettingsPage() {
         localStorage.setItem('ts_upcoming_city', upcomingCity);
       }
 
+      // Sync active tournament name to Supabase
+      if (supabase) {
+        const { data: tList } = await supabase.from('tournaments').select('*');
+        const featured = tList?.find((t: any) => t.featured && !t.deleted_at) || tList?.find((t: any) => !t.deleted_at);
+        if (featured) {
+          await supabase
+            .from('tournaments')
+            .update({ name: localName })
+            .eq('id', featured.id);
+        }
+      }
+
       setMessage({ type: 'success', text: 'System settings saved successfully.' });
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to save settings.' });
@@ -167,6 +179,35 @@ export default function SettingsPage() {
         localStorage.setItem('ts_upcoming_venue', upcomingVenue);
         localStorage.setItem('ts_upcoming_city', upcomingCity);
       }
+
+      // Keep context-wide active tournament name in sync
+      setTournamentName(upcomingName);
+
+      // Sync upcoming tournament configurations to Supabase
+      if (supabase) {
+        const { data: tList } = await supabase.from('tournaments').select('*');
+        const featured = tList?.find((t: any) => t.featured && !t.deleted_at) || tList?.find((t: any) => !t.deleted_at);
+        if (featured) {
+          const parseIso = (dateStr: string, timeStr: string = '08:00') => {
+            const parsed = new Date(`${dateStr}T${timeStr}`);
+            return !isNaN(parsed.getTime()) ? parsed.toISOString() : new Date().toISOString();
+          };
+          
+          await supabase
+            .from('tournaments')
+            .update({
+              name: upcomingName,
+              date: upcomingDate,
+              date_iso: parseIso(upcomingDate, upcomingTime),
+              venue: upcomingVenue,
+              city: upcomingCity,
+              registration_close: upcomingRegClose,
+              registration_close_iso: parseIso(upcomingRegClose, '23:59:59'),
+            })
+            .eq('id', featured.id);
+        }
+      }
+
       setMessage({ type: 'success', text: 'Upcoming tournament settings saved successfully.' });
     } catch (err: any) {
       setMessage({ type: 'error', text: err.message || 'Failed to save settings.' });
@@ -322,6 +363,30 @@ export default function SettingsPage() {
 
         // 4. Update current tournament name
         setTournamentName(newTName);
+
+        // Sync new tournament metadata to active/featured row in Supabase
+        const { data: tList } = await supabase.from('tournaments').select('*');
+        const featured = tList?.find((t: any) => t.featured && !t.deleted_at) || tList?.find((t: any) => !t.deleted_at);
+        if (featured) {
+          const parseIso = (dateStr: string) => {
+            const parsed = new Date(dateStr);
+            return !isNaN(parsed.getTime()) ? parsed.toISOString() : new Date().toISOString();
+          };
+
+          await supabase
+            .from('tournaments')
+            .update({
+              name: newTName,
+              date: newTDate,
+              date_iso: parseIso(newTDate),
+              venue: newTVenue,
+              city: newTCity,
+              registration_close: newTDate,
+              registration_close_iso: parseIso(newTDate),
+              status: 'Open'
+            })
+            .eq('id', featured.id);
+        }
 
         setMessage({ type: 'success', text: 'New tournament initialized and current records archived successfully! Reloading...' });
         setTimeout(() => {

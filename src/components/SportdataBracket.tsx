@@ -1,6 +1,7 @@
 import React from 'react';
 import { Bout, Participant, Club, Category } from '@/db/types';
 import { useTournament } from '@/context/TournamentContext';
+import { basePath } from '@/db/dbClient';
 
 interface SportdataBracketProps {
   bouts: Bout[];
@@ -36,7 +37,7 @@ export const SportdataBracket: React.FC<SportdataBracketProps> = ({
   theme = 'light',
   height = '650px',
 }) => {
-  const { tournamentName } = useTournament();
+  const { tournamentName, logoUrl } = useTournament();
   // 1. Get bouts for selected category (excluding 3rd place bout, which is round_no === 99)
   const categoryBouts = bouts.filter((b) => b.category_id === selectedCatId);
   const mainBouts = categoryBouts.filter((b) => b.round_no !== 99);
@@ -104,23 +105,7 @@ export const SportdataBracket: React.FC<SportdataBracketProps> = ({
       { rank: '2', p: second },
     ];
 
-    const repechageBouts = categoryBouts.filter((b) => b.round_no === 98);
-    if (repechageBouts.length > 0) {
-      const poolABouts = repechageBouts.filter((b) => b.bout_no < 20);
-      const finalPoolABout = poolABouts.length > 0 ? poolABouts.reduce((prev, curr) => curr.bout_no > prev.bout_no ? curr : prev) : null;
-      const bronzeA = finalPoolABout && finalPoolABout.status === 'Completed' && finalPoolABout.winner_id
-        ? participants.find((p) => p.id === finalPoolABout.winner_id)
-        : null;
-
-      const poolBBouts = repechageBouts.filter((b) => b.bout_no >= 20);
-      const finalPoolBBout = poolBBouts.length > 0 ? poolBBouts.reduce((prev, curr) => curr.bout_no > prev.bout_no ? curr : prev) : null;
-      const bronzeB = finalPoolBBout && finalPoolBBout.status === 'Completed' && finalPoolBBout.winner_id
-        ? participants.find((p) => p.id === finalPoolBBout.winner_id)
-        : null;
-
-      if (bronzeA) list.push({ rank: '3', p: bronzeA });
-      if (bronzeB) list.push({ rank: '3', p: bronzeB });
-    } else if (bronzeBout && bronzeBout.status === 'Completed' && bronzeBout.winner_id) {
+    if (bronzeBout && bronzeBout.status === 'Completed' && bronzeBout.winner_id) {
       const third = participants.find((p) => p.id === bronzeBout.winner_id);
       const fourthId =
         bronzeBout.winner_id === bronzeBout.participant_a_id
@@ -275,24 +260,19 @@ export const SportdataBracket: React.FC<SportdataBracketProps> = ({
           </div>
 
           {/* Rebranded Logo */}
-          <div className="flex items-center gap-1.5 mt-1 leading-none select-none">
-            {/* Double Swoosh SVG Icon */}
-            <svg width="18" height="11" viewBox="0 0 24 16" className="shrink-0">
-              <path d="M2 10C2 6 6 2 12 2C18 2 22 5 22 5L18 9C18 9 16 6 12 6C8 6 6 8 6 10H2Z" fill="#ef4444" />
-              <path d="M22 6C22 10 18 14 12 14C6 14 2 11 2 11L6 7C6 7 8 10 12 10C16 10 18 8 18 6H22Z" fill="#3b82f6" />
-            </svg>
+          <div className="flex items-center gap-2 mt-0.5 leading-none select-none shrink-0" style={{ maxWidth: '160px' }}>
+            <div className="h-7 w-7 rounded-full overflow-hidden border border-white/20 bg-slate-900 shrink-0">
+              <img src={logoUrl || `${basePath}/logo.jpg`} alt="Logo" className="h-full w-full object-cover" />
+            </div>
             <div className="flex flex-col items-start leading-none">
-              <div className="flex items-center gap-0.5">
-                <span className="text-[9px] font-black tracking-tighter text-red-600">KARATE</span>
-                <span className="text-[9px] font-black tracking-tighter text-blue-600">TECH</span>
-              </div>
-              <span
-                style={{ fontSize: '5px' }}
-                className={`font-bold tracking-wider uppercase leading-none ${
-                  theme === 'dark' ? 'text-gray-500' : 'text-gray-400'
-                }`}
-              >
-                event technology
+              <span className="font-extrabold text-[8px] tracking-tight text-foreground" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                <span style={{ color: '#b91c2e' }}>Karate</span><span style={{ color: '#38bdf8' }}>Tech</span>
+              </span>
+              <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 800, fontSize: '5px', letterSpacing: '0.01em', color: theme === 'dark' ? '#818cf8' : '#1a2744', lineHeight: 1.15 }}>
+                SP SportData Solution
+              </span>
+              <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: '3.8px', color: '#64748b', lineHeight: 1.15, marginTop: '1px' }}>
+                • Precision. • Speed. • Results. •
               </span>
             </div>
           </div>

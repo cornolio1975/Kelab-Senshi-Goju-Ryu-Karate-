@@ -20,7 +20,7 @@ if (isSupabaseConfigured) {
   }
 }
 
-export const basePath = process.env.NODE_ENV === 'production' ? '/Kelab-Senshi-Goju-Ryu-Karate-' : '';
+export const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 // Global DB client interface
 export const db = {
@@ -785,50 +785,88 @@ export const db = {
           console.warn('Local mockStore sync skipped:', e);
         }
         
-        const { data, error } = await supabase.from('bouts').update({
-          winner_id: winnerId,
-          score_a: scoreA,
-          score_b: scoreB,
-          status: 'Completed'
-        }).eq('id', boutId).select().single();
-        
-        // Fetch fresh list from Supabase to correctly calculate and advance brackets
-        const { data: dbBouts, error: boutsErr } = await supabase.from('bouts').select('*');
-        if (!boutsErr && dbBouts) {
-          const bout = dbBouts.find(b => b.id === boutId);
-          if (bout) {
-            if (bout.round_no === 98) {
-              const nextBoutNo = bout.bout_no + 1;
-              const nextBout = dbBouts.find(b => b.category_id === bout.category_id && b.round_no === 98 && b.bout_no === nextBoutNo);
-              if (nextBout) {
-                await supabase.from('bouts').update({ participant_a_id: winnerId }).eq('id', nextBout.id);
-              }
-            } else if (bout.round_no !== 99 && bout.round_no < 7) {
-              const nextRoundNo = bout.round_no + 1;
-              const nextBoutNo = Math.ceil(bout.bout_no / 2);
-              const nextBout = dbBouts.find(b => b.category_id === bout.category_id && b.round_no === nextRoundNo && b.bout_no === nextBoutNo);
-              if (nextBout) {
-                const isSlotA = bout.bout_no % 2 !== 0;
-                const updateData = isSlotA 
-                  ? { participant_a_id: winnerId } 
-                  : { participant_b_id: winnerId };
+        try {
+          const { data, error } = await supabase.from('bouts').update({
+            winner_id: winnerId,
+            score_a: scoreA,
+            score_b: scoreB,
+            status: 'Completed'
+          }).eq('id', boutId).select().single();
+          
+          // Fetch fresh list from Supabase to correctly calculate and advance brackets
+          const { data: dbBouts, error: boutsErr } = await supabase.from('bouts').select('*');
+          if (!boutsErr && dbBouts) {
+            const bout = dbBouts.find(b => b.id === boutId);
+            if (bout) {
+              if (bout.round_no === 98) {
+                const nextBoutNo = bout.bout_no + 1;
+                const nextBout = dbBouts.find(b => b.category_id === bout.category_id && b.round_no === 98 && b.bout_no === nextBoutNo);
+                if (nextBout) {
+                  await supabase.from('bouts').update({ participant_a_id: winnerId }).eq('id', nextBout.id);
+                }
+              } else if (bout.round_no !== 99 && bout.round_no < 7) {
+                const nextRoundNo = bout.round_no + 1;
+                const nextBoutNo = Math.ceil(bout.bout_no / 2);
+                const nextBout = dbBouts.find(b => b.category_id === bout.category_id && b.round_no === nextRoundNo && b.bout_no === nextBoutNo);
+                if (nextBout) {
+                  const isSlotA = bout.bout_no % 2 !== 0;
+                  const updateData = isSlotA 
+                    ? { participant_a_id: winnerId } 
+                    : { participant_b_id: winnerId };
 
-                await supabase.from('bouts').update(updateData).eq('id', nextBout.id);
+                  await supabase.from('bouts').update(updateData).eq('id', nextBout.id);
+                }
               }
             }
           }
-        }
 
-        if (error) throw error;
-        return data;
+          if (error) throw error;
+          return data;
+        } catch (e: any) {
+          console.warn('Supabase bouts table update result error, falling back to mockStore:', e.message || e);
+        }
       }
       return mockStore.bouts.updateBoutResult(boutId, winnerId, scoreA, scoreB);
     },
     updateBoutState: async (id: string, updates: Partial<Bout>): Promise<Bout> => {
       if (supabase) {
-        const { data, error } = await supabase.from('bouts').update(updates).eq('id', id).select().single();
-        if (error) throw error;
-        return data;
+        try {
+          const { data, error } = await supabase.from('bouts').update(updates).eq('id', id).select().single();
+          if (error) throw error;
+          
+          const updatedBout = data as Bout;
+          if (updatedBout.status === 'Completed' && updatedBout.winner_id) {
+            const winnerId = updatedBout.winner_id;
+            const { data: dbBouts, error: boutsErr } = await supabase.from('bouts').select('*');
+            if (!boutsErr && dbBouts) {
+              const bout = dbBouts.find(b => b.id === id);
+              if (bout) {
+                if (bout.round_no === 98) {
+                  const nextBoutNo = bout.bout_no + 1;
+                  const nextBout = dbBouts.find(b => b.category_id === bout.category_id && b.round_no === 98 && b.bout_no === nextBoutNo);
+                  if (nextBout) {
+                    await supabase.from('bouts').update({ participant_a_id: winnerId }).eq('id', nextBout.id);
+                  }
+                } else if (bout.round_no !== 99 && bout.round_no < 7) {
+                  const nextRoundNo = bout.round_no + 1;
+                  const nextBoutNo = Math.ceil(bout.bout_no / 2);
+                  const nextBout = dbBouts.find(b => b.category_id === bout.category_id && b.round_no === nextRoundNo && b.bout_no === nextBoutNo);
+                  if (nextBout) {
+                    const isSlotA = bout.bout_no % 2 !== 0;
+                    const updateData = isSlotA 
+                      ? { participant_a_id: winnerId } 
+                      : { participant_b_id: winnerId };
+
+                    await supabase.from('bouts').update(updateData).eq('id', nextBout.id);
+                  }
+                }
+              }
+            }
+          }
+          return updatedBout;
+        } catch (e: any) {
+          console.warn('Supabase bouts table update error, falling back to mockStore:', e.message || e);
+        }
       }
       return mockStore.bouts.updateBoutState(id, updates);
     },
@@ -863,21 +901,34 @@ export const db = {
           }
         }
 
-        const { data, error } = await supabase.from('bouts').update({
-          winner_id: null,
-          score_a: 0,
-          score_b: 0,
-          senshu_a: false,
-          senshu_b: false,
-          penalties_a: '',
-          penalties_b: '',
-          timer_seconds: matchDuration,
-          timer_active: false,
-          status: 'Scheduled'
-        }).eq('id', boutId).select().single();
+        try {
+          const { data, error } = await supabase.from('bouts').update({
+            winner_id: null,
+            score_a: 0,
+            score_b: 0,
+            senshu_a: false,
+            senshu_b: false,
+            penalties_a: '',
+            penalties_b: '',
+            penalties_c1_a: '0',
+            penalties_c2_a: '0',
+            penalties_c3_a: '0',
+            penalties_c1_b: '0',
+            penalties_c2_b: '0',
+            penalties_c3_b: '0',
+            points_aka_history: '',
+            points_ao_history: '',
+            victory_method: '',
+            timer_seconds: matchDuration,
+            timer_active: false,
+            status: 'Scheduled'
+          }).eq('id', boutId).select().single();
 
-        if (error) throw error;
-        return data;
+          if (error) throw error;
+          return data;
+        } catch (e: any) {
+          console.warn('Supabase bouts table reset error, falling back to mockStore:', e.message || e);
+        }
       }
       return mockStore.bouts.resetBoutResult(boutId, matchDuration);
     }

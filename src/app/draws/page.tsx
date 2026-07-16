@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useTournament } from '@/context/TournamentContext';
-import { db } from '@/db/dbClient';
+import { db, basePath } from '@/db/dbClient';
 import { Participant, Category, Bout, Club } from '@/db/types';
 import { 
   GitPullRequest, Check, Trophy, Trash2, Edit2, Play, 
@@ -12,7 +12,7 @@ import { SportdataBracket } from '@/components/SportdataBracket';
 
 
 export default function DrawsPage() {
-  const { searchQuery, triggerRefresh, canModify, tournamentName } = useTournament();
+  const { searchQuery, triggerRefresh, canModify, tournamentName, logoUrl } = useTournament();
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -101,6 +101,22 @@ export default function DrawsPage() {
     const total = activeInCat.length;
     const confirmed = activeInCat.filter(p => p.status === 'Confirmed' || p.status === 'Checked In').length;
     return { confirmed, total };
+  };
+
+  const getCategoryBracketStatus = (catId: string) => {
+    const catBouts = bouts.filter(b => b.category_id === catId);
+    if (catBouts.length === 0) {
+      return 'non-active';
+    }
+    const allCompleted = catBouts.every(b => b.status === 'Completed');
+    if (allCompleted) {
+      return 'completed';
+    }
+    const hasStarted = catBouts.some(b => b.status === 'Completed' || b.status === 'Running');
+    if (hasStarted) {
+      return 'active';
+    }
+    return 'non-active';
   };
 
   // Generate Draws Trigger
@@ -333,6 +349,26 @@ export default function DrawsPage() {
           {categories.map(c => {
             const { confirmed, total } = getCategoryCountInfo(c.id);
             const isSelected = selectedCatId === c.id;
+            const status = getCategoryBracketStatus(c.id);
+            
+            let btnClass = '';
+            if (isSelected) {
+              if (status === 'completed') {
+                btnClass = 'bg-emerald-600 text-white border-emerald-700 font-bold ring-2 ring-emerald-500 ring-offset-1 dark:ring-offset-slate-900';
+              } else if (status === 'active') {
+                btnClass = 'bg-orange-500 text-white border-orange-600 font-bold ring-2 ring-orange-500 ring-offset-1 dark:ring-offset-slate-900';
+              } else {
+                btnClass = 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white border-slate-400 dark:border-slate-500 font-bold ring-2 ring-primary ring-offset-1 dark:ring-offset-slate-900';
+              }
+            } else {
+              if (status === 'completed') {
+                btnClass = 'bg-emerald-100/90 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50 hover:bg-emerald-200/90 dark:hover:bg-emerald-950/60';
+              } else if (status === 'active') {
+                btnClass = 'bg-orange-100/90 dark:bg-orange-950/40 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-900/50 hover:bg-orange-200/90 dark:hover:bg-orange-950/60';
+              } else {
+                btnClass = 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850';
+              }
+            }
 
             return (
               <button
@@ -340,16 +376,26 @@ export default function DrawsPage() {
                 onClick={() => {
                   setSelectedCatId(c.id);
                 }}
-                className={`w-full text-left p-2.5 rounded-lg text-xs font-medium transition-all duration-150 flex items-center justify-between border cursor-pointer ${
-                  isSelected
-                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                    : 'bg-card text-muted-foreground border-border hover:bg-secondary hover:text-foreground'
-                }`}
+                className={`w-full text-left p-2.5 rounded-lg text-xs font-medium transition-all duration-150 flex items-center justify-between border cursor-pointer ${btnClass}`}
               >
                 <span className="truncate pr-2 font-semibold">{c.name}</span>
-                <span className="text-[10px] shrink-0 font-bold bg-secondary/15 px-1.5 py-0.5 rounded-md">
-                  ({confirmed}/{total})
-                </span>
+                <div className="flex items-center gap-1 shrink-0">
+                  {status === 'completed' && (
+                    <span className="text-[8px] font-extrabold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 px-1 rounded uppercase tracking-wider">
+                      Done
+                    </span>
+                  )}
+                  {status === 'active' && (
+                    <span className="text-[8px] font-extrabold bg-orange-500/20 text-orange-700 dark:text-orange-300 px-1 rounded uppercase tracking-wider">
+                      Live
+                    </span>
+                  )}
+                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                    isSelected ? 'bg-white/20 text-white' : 'bg-secondary/30 text-muted-foreground'
+                  }`}>
+                    ({confirmed}/{total})
+                  </span>
+                </div>
               </button>
             );
           })}
@@ -358,20 +404,45 @@ export default function DrawsPage() {
 
       {/* ======================================================== */}
       {/* RIGHT COLUMN: DRAW CONFIG & MATCH MATCHUPS PANEL         */}
-      {/* ======================================================== */}
       <div className="flex-1 min-w-0 bg-background p-4 lg:p-6 space-y-4 flex flex-col h-auto lg:h-full lg:overflow-hidden">
         
         {/* Title Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-          <div>
-            <h2 className="text-xl font-extrabold tracking-tight">Generate Draws</h2>
-            <p className="text-xs text-muted-foreground">Configure WKF standard brackets (Elimination + Repechage) for categories.</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0 border-b border-border pb-4">
+          <div className="flex flex-col md:flex-row md:items-center gap-4">
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-full overflow-hidden border border-white/20 bg-slate-900 shrink-0">
+                <img src={logoUrl || `${basePath}/logo.jpg`} alt="Logo" className="h-full w-full object-cover" />
+              </div>
+              <div className="flex flex-col leading-none">
+                <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: '1.05rem', lineHeight: 1, letterSpacing: '0.01em' }}>
+                  <span style={{ color: '#b91c2e' }}>Karate</span>
+                  <span style={{ color: '#38bdf8' }}>Tech</span>
+                </div>
+                <div style={{ height: '1.5px', background: 'linear-gradient(90deg, #b91c2e 60%, transparent 100%)', marginTop: '1.5px', marginBottom: '1.5px', borderRadius: '1px' }} />
+                <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: '0.72rem', letterSpacing: '0.01em', color: '#818cf8', lineHeight: 1.15 }}>
+                  SP SportData Solution
+                </span>
+                <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: '0.52rem', letterSpacing: '0.08em', color: '#64748b', lineHeight: 1.2, marginTop: '1.5px', whiteSpace: 'nowrap' }}>
+                  • Precision. • Speed. • Results. •
+                </span>
+              </div>
+            </div>
+
+            {/* Vertical Divider */}
+            <div className="hidden md:block h-8 w-[1px] bg-border mx-2" />
+
+            {/* Page Title & Subtitle */}
+            <div className="text-left">
+              <h2 className="text-lg font-extrabold tracking-tight">Generate Draws</h2>
+              <p className="text-[11px] text-muted-foreground">Configure standard single elimination brackets for categories.</p>
+            </div>
           </div>
+
           {/* Print button — always visible when any category has bouts */}
           {bouts.length > 0 && (
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer no-print"
+              className="flex items-center gap-2 px-4 py-2 bg-slate-800 dark:bg-slate-100 text-white dark:text-slate-900 hover:opacity-90 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer no-print shrink-0"
               title="Print all categories draw sheets"
             >
               <Printer className="h-4 w-4" />
@@ -389,7 +460,7 @@ export default function DrawsPage() {
                   Active Bracket: <span className="text-primary normal-case">{currentCategory.name}</span>
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  WKF Standard Draw System (Elimination + Repechage)
+                  Standard Draw System (Single Elimination)
                 </p>
               </div>
 
@@ -413,16 +484,6 @@ export default function DrawsPage() {
                   >
                     <Sparkles className="h-4 w-4 text-white" />
                     <span>{categoryBouts.length > 0 ? 'Regenerate Bracket' : 'Generate Bracket'}</span>
-                  </button>
-                )}
-                {canModify && categoryBouts.length > 0 && (
-                  <button
-                    onClick={handleGenerateRepechage}
-                    disabled={loading}
-                    className="px-4 py-2 bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                  >
-                    <GitPullRequest className="h-4 w-4" />
-                    <span>WKF Repechage</span>
                   </button>
                 )}
                 {categoryBouts.length > 0 && (
@@ -653,18 +714,26 @@ export default function DrawsPage() {
     {/* ======================================================= */}
     <div id="draw-print-area" className="hidden print:block">
       {/* Print Header */}
-      <div className="print-header">
-        <div>
-          <h1>{tournamentName}</h1>
-          <p>
-            {printTarget === 'current' && currentCategory
-              ? `Draw Sheet — ${currentCategory.name}`
-              : 'Official Draw Sheets — All Categories'}
-          </p>
+      <div className="print-header flex items-center justify-between" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '2px solid #000', paddingBottom: '6px', marginBottom: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <img src={logoUrl || `${basePath}/logo.jpg`} alt="Logo" style={{ height: '45px', width: '45px', objectFit: 'cover', borderRadius: '50%' }} />
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1 }}>
+            <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: '1.15rem', lineHeight: 1, letterSpacing: '0.01em' }}>
+              <span style={{ color: '#b91c2e' }}>Karate</span>
+              <span style={{ color: '#38bdf8' }}>Tech</span>
+            </div>
+            <div style={{ height: '2px', background: 'linear-gradient(90deg, #b91c2e 60%, transparent 100%)', marginTop: '2px', marginBottom: '2px', borderRadius: '1px' }} />
+            <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: '0.78rem', letterSpacing: '0.01em', color: '#000', lineHeight: 1.15 }}>
+              SP SportData Solution
+            </span>
+            <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: '0.58rem', letterSpacing: '0.08em', color: '#64748b', lineHeight: 1.2, marginTop: '2px' }}>
+              • Precision. • Speed. • Results. •
+            </span>
+          </div>
         </div>
-        <div className="print-meta">
+        <div className="print-meta" style={{ textAlign: 'right', fontSize: '9pt', color: '#555' }}>
+          <div style={{ fontWeight: 700, fontSize: '10pt' }}>{tournamentName}</div>
           <div>Printed: {new Date().toLocaleDateString('en-MY', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
-          <div style={{ fontWeight: 700 }}>CONFIDENTIAL — TOURNAMENT USE ONLY</div>
         </div>
       </div>
 

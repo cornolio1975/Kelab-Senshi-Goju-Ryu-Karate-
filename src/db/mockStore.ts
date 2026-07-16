@@ -1244,8 +1244,37 @@ export const mockStore = {
       const list = getStoreData<Bout>('ts_bouts', []);
       const idx = list.findIndex(b => b.id === id);
       if (idx === -1) throw new Error('Bout not found');
-      const updated = { ...list[idx], ...updates };
+      
+      const oldBout = list[idx];
+      const updated = { ...oldBout, ...updates };
       list[idx] = updated;
+
+      // Advance winner to the next round if bout is completed and has a winner
+      if (updated.status === 'Completed' && updated.winner_id) {
+        const winnerId = updated.winner_id;
+        if (updated.round_no === 98) {
+          const nextBoutNo = updated.bout_no + 1;
+          const nextBoutIdx = list.findIndex(b => b.category_id === updated.category_id && b.round_no === 98 && b.bout_no === nextBoutNo);
+          if (nextBoutIdx !== -1) {
+            list[nextBoutIdx] = { ...list[nextBoutIdx], participant_a_id: winnerId };
+          }
+        } else if (updated.round_no !== 99 && updated.round_no < 7) {
+          const nextRoundNo = updated.round_no + 1;
+          const nextBoutNo = Math.ceil(updated.bout_no / 2);
+          const nextBoutIdx = list.findIndex(b => b.category_id === updated.category_id && b.round_no === nextRoundNo && b.bout_no === nextBoutNo);
+          
+          if (nextBoutIdx !== -1) {
+            const isSlotA = updated.bout_no % 2 !== 0;
+            const nextBout = list[nextBoutIdx];
+            if (isSlotA) {
+              list[nextBoutIdx] = { ...nextBout, participant_a_id: winnerId };
+            } else {
+              list[nextBoutIdx] = { ...nextBout, participant_b_id: winnerId };
+            }
+          }
+        }
+      }
+
       saveStoreData('ts_bouts', list);
       return updated;
     },
@@ -1266,6 +1295,15 @@ export const mockStore = {
         senshu_b: false,
         penalties_a: '',
         penalties_b: '',
+        penalties_c1_a: '0',
+        penalties_c2_a: '0',
+        penalties_c3_a: '0',
+        penalties_c1_b: '0',
+        penalties_c2_b: '0',
+        penalties_c3_b: '0',
+        points_aka_history: '',
+        points_ao_history: '',
+        victory_method: '',
         timer_seconds: matchDuration,
         timer_active: false,
         status: 'Scheduled' as const
@@ -1463,7 +1501,7 @@ const SEED_TOURNAMENTS: Tournament[] = [
   {
     id: 'ksg-open-2026',
     name: 'Kelab Senshi Goju-Ryu Open Karate Championship 2026',
-    organizer: 'Kelab Senshi Goju-Ryu',
+    organizer: 'Kelab Senshi Goju-Ryu Karate-Do',
     date: '15–16 August 2026',
     date_iso: '2026-08-15T08:00:00Z',
     venue: 'Dewan Serbaguna Petaling Jaya',

@@ -360,12 +360,25 @@ export default function PublicRegistrationPage() {
         
         {/* Title */}
         <div className="text-center md:text-left space-y-1.5 border-b border-white/5 pb-6">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full overflow-hidden border border-white/10 bg-slate-900 shrink-0">
-              <img src={`${basePath}/logo.jpg`} alt="Kelab Senshi Logo" className="h-full w-full object-cover" />
+          <div className="flex items-center gap-4">
+            <div className="h-14 w-14 rounded-full overflow-hidden border border-white/20 bg-slate-900 shrink-0">
+              <img src={`${basePath}/logo.jpg`} alt="Logo" className="h-full w-full object-cover" />
             </div>
-            <div>
-              <h1 className="text-xl font-black text-white tracking-tight uppercase">Tournament Registration Portal</h1>
+            <div className="flex flex-col leading-none">
+              <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: '1.05rem', lineHeight: 1, letterSpacing: '0.01em' }}>
+                <span style={{ color: '#b91c2e' }}>Karate</span>
+                <span style={{ color: '#38bdf8' }}>Tech</span>
+              </div>
+              <div style={{ height: '1.5px', background: 'linear-gradient(90deg, #b91c2e 60%, transparent 100%)', marginTop: '1.5px', marginBottom: '1.5px', borderRadius: '1px' }} />
+              <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: '0.72rem', letterSpacing: '0.01em', color: '#818cf8', lineHeight: 1.15 }}>
+                SP SportData Solution
+              </span>
+              <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: '0.52rem', letterSpacing: '0.08em', color: '#64748b', lineHeight: 1.2, marginTop: '1.5px' }}>
+                • Precision. • Speed. • Results. •
+              </span>
+            </div>
+            <div className="border-l border-white/10 pl-4 ml-1">
+              <h1 className="text-lg font-black text-white tracking-tight uppercase">Registration Portal</h1>
               <p className="text-xs text-slate-400 font-medium">{tournamentName}</p>
             </div>
           </div>
@@ -601,8 +614,8 @@ export default function PublicRegistrationPage() {
       {/* Public Footer */}
       <footer className="max-w-4xl mx-auto py-12 text-center text-xs text-slate-500 relative z-10 border-t border-white/5 mt-12 space-y-1">
         <span className="font-bold text-slate-400 block mb-1">© 2026 KarateTech</span>
-        <div className="text-slate-450">Developed by <span className="font-semibold text-slate-350">SP Sport Data Solution</span></div>
-        <div className="text-[11px] text-slate-500">Professional Karate Tournament Management System</div>
+        <div className="text-slate-450">Developed by <span className="font-semibold text-slate-350">SP SportData Solution</span></div>
+        <div className="text-[11px] text-slate-500">(Professional Karate Tournament Management System)</div>
         <div className="text-[11px] text-slate-550">All Rights Reserved.</div>
       </footer>
 

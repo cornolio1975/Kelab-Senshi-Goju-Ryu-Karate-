@@ -58,12 +58,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       `}
     >
       <div className="h-16 flex items-center gap-3 px-6 border-b border-border">
-        <div className="h-9 w-9 rounded-lg flex items-center justify-center overflow-hidden shadow-sm bg-neutral-100 dark:bg-neutral-800 border border-border">
+        <div className="h-10 w-10 rounded-full overflow-hidden border border-white/20 bg-slate-900 shrink-0">
           <img src={logoUrl || `${basePath}/logo.jpg`} alt="Logo" className="h-full w-full object-cover" />
         </div>
-        <div>
-          <span className="font-bold text-sm leading-tight block">KARATE TECH</span>
-          <span className="text-xs text-muted-foreground">Tournament Admin</span>
+        <div className="flex flex-col leading-none">
+          <div style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 900, fontSize: '0.95rem', lineHeight: 1, letterSpacing: '0.01em' }}>
+            <span style={{ color: '#b91c2e' }}>Karate</span>
+            <span style={{ color: '#38bdf8' }}>Tech</span>
+          </div>
+          <div style={{ height: '1.5px', background: 'linear-gradient(90deg, #b91c2e 60%, transparent 100%)', marginTop: '1.5px', marginBottom: '1.5px', borderRadius: '1px' }} />
+          <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 700, fontSize: '0.62rem', letterSpacing: '0.01em', color: '#818cf8', lineHeight: 1.15 }}>
+            SP SportData Solution
+          </span>
+          <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 600, fontSize: '0.45rem', letterSpacing: '0.08em', color: '#64748b', lineHeight: 1.2, marginTop: '1.5px' }}>
+            • Precision. • Speed. • Results. •
+          </span>
         </div>
       </div>
 

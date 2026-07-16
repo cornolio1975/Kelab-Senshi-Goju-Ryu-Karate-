@@ -1,15 +1,19 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTournament } from '@/context/TournamentContext';
 import { db } from '@/db/dbClient';
-import { Category, Participant, Club } from '@/db/types';
+import { Category, Participant, Club, Bout } from '@/db/types';
+import { basePath } from '@/db/dbClient';
 import { 
-  Plus, Tags, Merge, Split, Move, ArrowRight, X, Check, AlertCircle, RefreshCw, Trash2 
+  Plus, Tags, Merge, Split, Move, X, Check, AlertCircle, RefreshCw, Trash2, Monitor, ChevronRight
 } from 'lucide-react';
 
 export default function CategoriesPage() {
   const { refreshKey, triggerRefresh, canModify } = useTournament();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -17,12 +21,14 @@ export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [clubs, setClubs] = useState<Club[]>([]);
+  const [bouts, setBouts] = useState<Bout[]>([]);
   const [mappings, setMappings] = useState<any[]>([]);
 
   // Dialog states
   const [isMergeOpen, setIsMergeOpen] = useState(false);
   const [isSplitOpen, setIsSplitOpen] = useState(false);
   const [isMoveOpen, setIsMoveOpen] = useState(false);
+  const [consoleCat, setConsoleCat] = useState<Category | null>(null); // for bout-picker modal
 
   // Merge state
   const [selectedMergeIds, setSelectedMergeIds] = useState<string[]>([]);
@@ -60,14 +66,16 @@ export default function CategoriesPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [catList, pList, clList] = await Promise.all([
+      const [catList, pList, clList, bList] = await Promise.all([
         db.categories.list(),
         db.participants.list(),
-        db.clubs.list()
+        db.clubs.list(),
+        db.bouts.list()
       ]);
       setCategories(catList);
       setParticipants(pList);
       setClubs(clList);
+      setBouts(bList);
 
       const rawpc = localStorage.getItem('ts_participant_categories');
       setMappings(rawpc ? JSON.parse(rawpc) : []);
@@ -80,7 +88,21 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     if (mounted) {
-      loadData();
+      loadData().then(() => {
+        // Auto-open Match Console Hub if returning from control page after saving
+        const consoleParam = searchParams.get('console');
+        if (consoleParam) {
+          // Categories are loaded, find the category and open modal
+          // We use a small delay to let state settle
+          setTimeout(() => {
+            setCategories(prev => {
+              const cat = prev.find(c => c.id === consoleParam);
+              if (cat) setConsoleCat(cat);
+              return prev;
+            });
+          }, 100);
+        }
+      });
     }
   }, [mounted, refreshKey]);
 
@@ -135,6 +157,22 @@ export default function CategoriesPage() {
   const getParticipantsForCategory = (catId: string) => {
     const pIds = mappings.filter(m => m.category_id === catId).map(m => m.participant_id);
     return participants.filter(p => pIds.includes(p.id));
+  };
+
+  const getCategoryBracketStatus = (catId: string) => {
+    const catBouts = bouts.filter(b => b.category_id === catId);
+    if (catBouts.length === 0) {
+      return 'non-active';
+    }
+    const allCompleted = catBouts.every(b => b.status === 'Completed');
+    if (allCompleted) {
+      return 'completed';
+    }
+    const hasStarted = catBouts.some(b => b.status === 'Completed' || b.status === 'Running');
+    if (hasStarted) {
+      return 'active';
+    }
+    return 'non-active';
   };
 
   // Actions
@@ -302,12 +340,22 @@ export default function CategoriesPage() {
             const cap = cat.capacity || 32;
             const ratio = (count / cap) * 100;
 
+            const status = getCategoryBracketStatus(cat.id);
+            let cardClass = '';
+            if (status === 'completed') {
+              cardClass = 'bg-emerald-50/70 dark:bg-emerald-950/10 border-emerald-200 dark:border-emerald-900/35 hover:border-emerald-400/50';
+            } else if (status === 'active') {
+              cardClass = 'bg-orange-50/70 dark:bg-orange-950/10 border-orange-200 dark:border-orange-900/35 hover:border-orange-400/50';
+            } else {
+              cardClass = 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-350';
+            }
+
             return (
-              <div key={cat.id} className="bg-card border border-border rounded-xl p-5 shadow-xs flex flex-col justify-between hover:border-muted-foreground/35 transition-all">
+              <div key={cat.id} className={`rounded-xl p-5 border shadow-sm flex flex-col justify-between transition-all duration-200 ${cardClass}`}>
                 {/* Category metadata */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase ${
                         cat.gender === 'Male' 
                           ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' 
@@ -320,6 +368,16 @@ export default function CategoriesPage() {
                       <span className="text-[10px] font-bold text-muted-foreground bg-secondary/50 dark:bg-secondary/20 px-1.5 py-0.5 rounded border border-border/30">
                         {cat.min_weight}-{cat.max_weight}kg
                       </span>
+                      {status === 'completed' && (
+                        <span className="text-[9px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 px-2 py-0.5 rounded-full uppercase tracking-wider">
+                          Completed
+                        </span>
+                      )}
+                      {status === 'active' && (
+                        <span className="text-[9px] font-bold bg-orange-500/20 text-orange-700 dark:text-orange-450 px-2 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                          Active
+                        </span>
+                      )}
                     </div>
                     {canModify && (
                       <button
@@ -375,6 +433,20 @@ export default function CategoriesPage() {
                     )}
                   </div>
                 )}
+
+
+
+                {/* Match Console Hub button — opens bout picker modal */}
+                {bouts.some(b => b.category_id === cat.id) && (
+                  <button
+                    onClick={() => setConsoleCat(cat)}
+                    className="mt-2 w-full flex items-center justify-center gap-1.5 py-2 rounded-lg text-[11px] font-bold transition-all cursor-pointer border bg-slate-800/10 hover:bg-slate-800/20 dark:bg-white/5 dark:hover:bg-white/10 border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300"
+                  >
+                    <Monitor className="h-3.5 w-3.5" />
+                    <span>Match Console Hub</span>
+                    <ChevronRight className="h-3 w-3 ml-0.5" />
+                  </button>
+                )}
               </div>
             );
           })}
@@ -382,6 +454,138 @@ export default function CategoriesPage() {
       )}
 
       {/* --- DIALOG MODALS --- */}
+
+      {/* MATCH CONSOLE — Bout Picker Modal */}
+      {consoleCat && (() => {
+        const catBouts = bouts
+          .filter(b => b.category_id === consoleCat.id && b.round_no !== 99)
+          .sort((a, b) => a.round_no !== b.round_no ? a.round_no - b.round_no : a.bout_no - b.bout_no);
+
+        const getRoundLabel = (roundNo: number) => {
+          const roundBouts = catBouts.filter(b => b.round_no === roundNo);
+          if (roundBouts.length === 1) return 'Final';
+          if (roundBouts.length === 2) return 'Semi-Final';
+          return `Round ${roundNo}`;
+        };
+
+        return (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-30 p-4">
+            <div className="bg-card w-full max-w-lg rounded-2xl shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-200 text-foreground">
+              
+              {/* Modal Header */}
+              <div className="p-5 border-b border-border bg-secondary/10 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 bg-primary/10 rounded-lg">
+                    <Monitor className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <span className="font-bold text-sm block">Match Console Hub</span>
+                    <span className="text-[10px] text-muted-foreground font-medium truncate max-w-[280px] block" title={consoleCat.name}>
+                      {consoleCat.name} — Select a bout to open the control console
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setConsoleCat(null)}
+                  className="p-1.5 hover:bg-secondary text-muted-foreground hover:text-foreground rounded-lg transition-colors cursor-pointer"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Bout List */}
+              <div className="p-4 space-y-1.5 max-h-[55vh] overflow-y-auto">
+                {catBouts.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-muted-foreground">
+                    No bouts found for this category.
+                  </div>
+                ) : (
+                  catBouts.map(bout => {
+                    const compA = participants.find(p => p.id === bout.participant_a_id);
+                    const compB = participants.find(p => p.id === bout.participant_b_id);
+                    const roundLabel = getRoundLabel(bout.round_no);
+                    const isCompleted = bout.status === 'Completed';
+                    const isRunning = bout.status === 'Running';
+
+                    return (
+                      <button
+                        key={bout.id}
+                        onClick={() => {
+                          setConsoleCat(null);
+                          router.push(`${basePath}/dashboard/control?boutId=${bout.id}&catId=${consoleCat.id}`);
+                        }}
+                        className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-150 cursor-pointer text-left group ${
+                          isRunning
+                            ? 'bg-orange-50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800/40 hover:border-orange-400/60'
+                            : isCompleted
+                            ? 'bg-emerald-50/60 dark:bg-emerald-950/10 border-emerald-200/60 dark:border-emerald-800/30 hover:border-emerald-400/50'
+                            : 'bg-secondary/40 border-border hover:bg-secondary hover:border-border/80'
+                        }`}
+                      >
+                        {/* Round + Bout badge */}
+                        <div className="flex flex-col items-center min-w-[48px] gap-0.5">
+                          <span className={`text-[9px] font-black uppercase tracking-widest ${
+                            isRunning ? 'text-orange-600 dark:text-orange-400' :
+                            isCompleted ? 'text-emerald-600 dark:text-emerald-400' :
+                            'text-muted-foreground'
+                          }`}>
+                            {roundLabel}
+                          </span>
+                          <span className="text-[11px] font-bold text-foreground">B{bout.bout_no}</span>
+                        </div>
+
+                        {/* Divider */}
+                        <div className="w-px h-8 bg-border/60" />
+
+                        {/* Fighters */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-black text-red-500 uppercase">AKA</span>
+                            <span className="text-xs font-semibold text-foreground truncate">
+                              {compA?.full_name || 'TBD'}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-[10px] font-black text-blue-500 uppercase">AO</span>
+                            <span className="text-xs font-semibold text-foreground truncate">
+                              {compB?.full_name || 'TBD'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Status chip */}
+                        <div className="shrink-0 flex items-center gap-2">
+                          <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                            isRunning
+                              ? 'bg-orange-500/20 text-orange-700 dark:text-orange-400 animate-pulse'
+                              : isCompleted
+                              ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400'
+                              : 'bg-secondary text-muted-foreground'
+                          }`}>
+                            {isRunning ? 'Live' : isCompleted ? 'Done' : 'Ready'}
+                          </span>
+                          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-3 border-t border-border bg-secondary/5 flex items-center justify-between">
+                <span className="text-[10px] text-muted-foreground">{catBouts.length} bout{catBouts.length !== 1 ? 's' : ''} in this category</span>
+                <button
+                  onClick={() => setConsoleCat(null)}
+                  className="px-3 py-1.5 border border-border text-muted-foreground hover:text-foreground rounded-lg text-xs font-semibold cursor-pointer transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* A. MERGE DIALOG */}
       {isMergeOpen && (
