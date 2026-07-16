@@ -32,6 +32,7 @@ export interface Category {
   capacity?: number;
   status: 'Open' | 'Closed' | 'Full';
   created_at?: string;
+  format?: 'knockout' | 'round_robin' | 'wkf_repechage';
 }
 
 export interface Team {

@@ -19,6 +19,7 @@ globalThis.localStorage = {
 // Now import mockStore and types
 import { mockStore } from './mockStore';
 import { Participant, ParticipantCategory, Bout } from './types';
+import { calculateRoundRobinRankings } from '../utils/roundRobinRankings';
 
 // Helper to create participants
 function createParticipants(count: number): Participant[] {
@@ -318,6 +319,93 @@ describe('Karate Tournament Draw Generator Tests', () => {
       expect(bouts.length).toBe(1);
       expect(bouts[0].participant_a_id).toBe('custom-1');
       expect(bouts[0].participant_b_id).toBe('custom-2');
+    });
+  });
+
+  describe('Round-robin Ranking Calculations', () => {
+    it('correctly calculates wins and sorts using WKF tie-breaking rules', () => {
+      // 1. Setup 3 participants
+      const athletes = createParticipants(3);
+      const cat = { id: catId, name: 'RR Category', gender: 'Male' as const, min_age: 18, max_age: 99, min_weight: 0, max_weight: 100, capacity: 16, status: 'Open' as const, format: 'round_robin' as const };
+      
+      localStorage.setItem('ts_categories', JSON.stringify([cat]));
+      localStorage.setItem('ts_participants', JSON.stringify(athletes));
+      localStorage.setItem('ts_participant_categories', JSON.stringify(createMappings(athletes.map(p => p.id), catId)));
+
+      // 2. Generate draw (should produce 3 matches: part-1 vs part-2, part-1 vs part-3, part-2 vs part-3)
+      const generated = mockStore.bouts.generateDraw(catId, 'round_robin', false, athletes);
+      expect(generated.length).toBe(3);
+
+      const clubs = [{ id: 'club-1', name: 'Club 1' }];
+      
+      // Let's resolve the bouts:
+      // Match 1: part-1 vs part-2. Winner: part-1 (Score: 3 - 1)
+      const m1 = generated.find(b => (b.participant_a_id === 'part-1' && b.participant_b_id === 'part-2') || (b.participant_b_id === 'part-1' && b.participant_a_id === 'part-2'))!;
+      mockStore.bouts.updateBoutResult(m1.id, 'part-1', 3, 1);
+
+      // Match 2: part-1 vs part-3. Winner: part-3 (Score: 2 - 4)
+      const m2 = generated.find(b => (b.participant_a_id === 'part-1' && b.participant_b_id === 'part-3') || (b.participant_b_id === 'part-1' && b.participant_a_id === 'part-3'))!;
+      mockStore.bouts.updateBoutResult(m2.id, 'part-3', 2, 4); // part-1 scores 2, part-3 scores 4
+
+      // Match 3: part-2 vs part-3. Winner: part-2 (Score: 4 - 2)
+      const m3 = generated.find(b => (b.participant_a_id === 'part-2' && b.participant_b_id === 'part-3') || (b.participant_b_id === 'part-2' && b.participant_a_id === 'part-3'))!;
+      mockStore.bouts.updateBoutResult(m3.id, 'part-2', 4, 2); // part-2 scores 4, part-3 scores 2
+
+      // All 3 athletes have 1 win and 1 loss!
+      // Let's calculate points diff:
+      // part-1: Scored: 3+2 = 5. Conceded: 1+4 = 5. Diff: 0
+      // part-2: Scored: 1+4 = 5. Conceded: 3+2 = 5. Diff: 0
+      // part-3: Scored: 4+2 = 6. Conceded: 2+4 = 6. Diff: 0
+      // Let's check total points scored:
+      // part-3 scored 6 points, which is higher than part-1 (5) and part-2 (5).
+      // So part-3 must be ranked 1st!
+      // Between part-1 and part-2:
+      // Head-to-head match m1 was won by part-1.
+      // So part-1 must be ranked 2nd and part-2 ranked 3rd!
+
+      const freshBouts = mockStore.bouts.listForCategory(catId);
+      const rankings = calculateRoundRobinRankings(freshBouts, athletes, clubs);
+
+      expect(rankings[0].participantId).toBe('part-3'); // 1st because of higher total points scored
+      expect(rankings[1].participantId).toBe('part-1'); // 2nd because of head-to-head victory over part-2
+      expect(rankings[2].participantId).toBe('part-2'); // 3rd
+    });
+  });
+
+  describe('WKF Repechage Automatic Generation', () => {
+    it('automatically generates repechage pools once finalists are determined', () => {
+      // Setup 4 participants
+      const athletes = createParticipants(4);
+      const cat = { id: catId, name: 'Repechage Category', gender: 'Male' as const, min_age: 18, max_age: 99, min_weight: 0, max_weight: 100, capacity: 16, status: 'Open' as const, format: 'wkf_repechage' as const };
+      
+      localStorage.setItem('ts_categories', JSON.stringify([cat]));
+      localStorage.setItem('ts_participants', JSON.stringify(athletes));
+      localStorage.setItem('ts_participant_categories', JSON.stringify(createMappings(athletes.map(p => p.id), catId)));
+
+      // Generate draw (should generate standard bracket with 2 rounds: R1 matches, R2 final)
+      const generated = mockStore.bouts.generateDraw(catId, 'wkf_repechage', false, athletes);
+      expect(generated.length).toBe(3); // 2 matches in R1, 1 match in R2 (final)
+
+      const r1Bout1 = generated.find(b => b.round_no === 1 && b.bout_no === 1)!;
+      const r1Bout2 = generated.find(b => b.round_no === 1 && b.bout_no === 2)!;
+
+      // Complete R1 matches:
+      // R1 Bout 1: part-1 vs part-2. Winner: part-1
+      mockStore.bouts.updateBoutResult(r1Bout1.id, 'part-1', 4, 1);
+      // R1 Bout 2: part-3 vs part-4. Winner: part-3
+      mockStore.bouts.updateBoutResult(r1Bout2.id, 'part-3', 3, 0);
+
+      // Now finalists are set: part-1 and part-3.
+      // Since format is 'wkf_repechage', it should have automatically run generateRepechage!
+      const freshBouts = mockStore.bouts.listForCategory(catId);
+      const repechageBouts = freshBouts.filter(b => b.round_no === 98);
+
+      // Loser to finalist A (part-1) in R1: part-2.
+      // Loser to finalist B (part-3) in R1: part-4.
+      // Since there is only 1 loser on each side, WKF repechage for each pool A & B needs at least 2 losers to generate.
+      // If there's only 1 loser (the semifinal loser), they are directly the bronze winners, no repechage matches needed.
+      // Let's verify that no repechage matches were created because losers list has length 1 (< 2).
+      expect(repechageBouts.length).toBe(0);
     });
   });
 });

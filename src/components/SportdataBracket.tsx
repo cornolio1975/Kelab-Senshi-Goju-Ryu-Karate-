@@ -2,6 +2,7 @@ import React from 'react';
 import { Bout, Participant, Club, Category } from '@/db/types';
 import { useTournament } from '@/context/TournamentContext';
 import { basePath } from '@/db/dbClient';
+import { calculateRoundRobinRankings } from '@/utils/roundRobinRankings';
 
 interface SportdataBracketProps {
   bouts: Bout[];
@@ -38,10 +39,12 @@ export const SportdataBracket: React.FC<SportdataBracketProps> = ({
   height = '650px',
 }) => {
   const { tournamentName, logoUrl } = useTournament();
+  const [zoom, setZoom] = React.useState(100);
+
   // 1. Get bouts for selected category (excluding 3rd place bout, which is round_no === 99)
   const categoryBouts = bouts.filter((b) => b.category_id === selectedCatId);
-  const mainBouts = categoryBouts.filter((b) => b.round_no !== 99);
-  const bronzeBout = categoryBouts.find((b) => b.round_no === 99);
+  const selectedCategory = categories.find((c) => c.id === selectedCatId);
+  const isRoundRobin = selectedCategory?.format === 'round_robin';
 
   if (categoryBouts.length === 0) {
     return (
@@ -50,6 +53,200 @@ export const SportdataBracket: React.FC<SportdataBracketProps> = ({
       </div>
     );
   }
+
+  if (isRoundRobin) {
+    const standings = calculateRoundRobinRankings(categoryBouts, participants, clubs);
+
+    return (
+      <div
+        className={`w-full flex flex-col rounded-xl overflow-hidden ${
+          theme === 'dark'
+            ? 'bg-[#060a13] border border-gray-800 text-gray-200'
+            : 'bg-white border border-gray-200 text-gray-900'
+        }`}
+        style={{ minHeight: height }}
+      >
+        {/* Header */}
+        <div
+          className="flex items-stretch justify-between px-3 py-2 shrink-0 border-b relative"
+          style={{
+            height: '45px',
+            borderColor: theme === 'dark' ? '#1f2937' : '#cbd5e1',
+            background: theme === 'dark' ? '#0b111e' : '#f8fafc',
+          }}
+        >
+          {/* Left Side */}
+          <div
+            className="flex-1 flex flex-col justify-center px-3 py-1 border rounded"
+            style={{
+              borderColor: theme === 'dark' ? '#374151' : '#a3a3a3',
+              background: theme === 'dark' ? '#111827' : '#e5e5e5',
+              marginRight: '12px',
+            }}
+          >
+            <div className="text-[10px] font-black uppercase tracking-wide leading-none text-gray-900 dark:text-white truncate">
+              {selectedCategory?.name || 'Round Robin Division'}
+            </div>
+            <div className="text-[7.5px] font-bold uppercase text-gray-600 dark:text-gray-400 truncate mt-0.5 leading-none">
+              {tournamentName || 'Kelab Senshi Goju-Ryu Open Karate Championship 2026'}, MAS
+            </div>
+          </div>
+
+          {/* Right Side */}
+          <div className="flex items-center gap-2 mt-0.5 leading-none select-none shrink-0" style={{ maxWidth: '160px' }}>
+            <div className="h-7 w-7 rounded-full overflow-hidden border border-white/20 bg-slate-900 shrink-0">
+              <img src={logoUrl || `${basePath}/logo.jpg`} alt="Logo" className="h-full w-full object-cover" />
+            </div>
+            <div className="flex flex-col items-start leading-none">
+              <span className="font-extrabold text-[8px] tracking-tight text-foreground" style={{ fontFamily: "'Montserrat', sans-serif" }}>
+                <span style={{ color: '#b91c2e' }}>Karate</span><span style={{ color: '#38bdf8' }}>Tech</span>
+              </span>
+              <span style={{ fontFamily: "'Montserrat', sans-serif", fontWeight: 800, fontSize: '5px', letterSpacing: '0.01em', color: theme === 'dark' ? '#818cf8' : '#1a2744', lineHeight: 1.15 }}>
+                SP SportData Solution
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Contents Grid */}
+        <div className="flex-1 p-4 grid grid-cols-1 lg:grid-cols-12 gap-6 overflow-y-auto max-h-[600px]">
+          {/* Standings Table */}
+          <div className="lg:col-span-7 space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1">
+              🏆 Standings Table
+            </h3>
+            <div className="border border-border rounded-xl overflow-hidden bg-card">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-secondary/20 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-b border-border">
+                    <th className="py-2 px-3 text-center w-10">Rank</th>
+                    <th className="py-2 px-3">Competitor</th>
+                    <th className="py-2 px-3 text-center w-12">W</th>
+                    <th className="py-2 px-3 text-center w-12">L</th>
+                    <th className="py-2 px-3 text-center w-12">D</th>
+                    <th className="py-2 px-3 text-center w-16">Score Diff</th>
+                    <th className="py-2 px-3 text-center w-16">Total Pts</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border/60">
+                  {standings.map((row, idx) => {
+                    const isGold = idx === 0;
+                    const isSilver = idx === 1;
+                    const isBronze = idx === 2;
+
+                    return (
+                      <tr
+                        key={row.participantId}
+                        className={`hover:bg-secondary/5 transition-colors ${
+                          isGold ? 'bg-amber-500/5 font-semibold' :
+                          isSilver ? 'bg-slate-400/5' :
+                          isBronze ? 'bg-amber-700/5' : ''
+                        }`}
+                      >
+                        <td className="py-2 px-3 text-center">
+                          {isGold && <span className="text-yellow-500 font-black text-sm">🥇</span>}
+                          {isSilver && <span className="text-slate-400 font-black text-sm">🥈</span>}
+                          {isBronze && <span className="text-amber-700 font-black text-sm">🥉</span>}
+                          {!isGold && !isSilver && !isBronze && (idx + 1)}
+                        </td>
+                        <td className="py-2 px-3">
+                          <div className="font-bold text-foreground">{row.fullName}</div>
+                          <div className="text-[10px] text-muted-foreground">{row.clubName}</div>
+                        </td>
+                        <td className="py-2 px-3 text-center font-bold text-emerald-600 dark:text-emerald-400">{row.wins}</td>
+                        <td className="py-2 px-3 text-center text-red-600 dark:text-red-400">{row.losses}</td>
+                        <td className="py-2 px-3 text-center text-muted-foreground">{row.draws}</td>
+                        <td className="py-2 px-3 text-center font-mono">
+                          {row.pointsDifference > 0 ? `+${row.pointsDifference}` : row.pointsDifference}
+                        </td>
+                        <td className="py-2 px-3 text-center font-mono font-semibold">{row.pointsScored}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Match Order List */}
+          <div className="lg:col-span-5 space-y-4">
+            <h3 className="text-xs font-black uppercase tracking-wider text-primary flex items-center gap-1">
+              🥋 Match List
+            </h3>
+            <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+              {categoryBouts.sort((a, b) => a.bout_no - b.bout_no).map((b) => {
+                const compA = participants.find(p => p.id === b.participant_a_id);
+                const compB = participants.find(p => p.id === b.participant_b_id);
+                const isCompleted = b.status === 'Completed';
+                const isRunning = b.status === 'Running';
+
+                return (
+                  <div
+                    key={b.id}
+                    className={`border border-border/85 rounded-xl p-3 bg-card space-y-2.5 transition relative overflow-hidden ${
+                      isRunning ? 'ring-1 ring-primary/50 bg-primary/5' : ''
+                    }`}
+                  >
+                    <div className="flex justify-between items-center text-[10px] text-muted-foreground border-b border-border/40 pb-1.5">
+                      <span className="font-bold uppercase tracking-wider">Match #{b.bout_no}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="bg-secondary/40 px-1.5 py-0.5 rounded font-mono font-semibold">{b.tatami}</span>
+                        <span className={`px-1.5 py-0.5 rounded-sm font-bold uppercase ${
+                          isCompleted ? 'bg-emerald-500/10 text-emerald-500' :
+                          isRunning ? 'bg-primary/10 text-primary' :
+                          'bg-secondary text-muted-foreground'
+                        }`}>
+                          {b.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      {/* Competitor A */}
+                      <div className="flex justify-between items-center text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-2 h-2 rounded-full bg-[#ff0000] shrink-0" />
+                          <span className={`font-bold truncate ${b.winner_id === b.participant_a_id ? 'underline text-primary' : 'text-foreground'}`}>
+                            {compA?.full_name || 'TBD'}
+                          </span>
+                        </div>
+                        <span className="font-mono font-extrabold text-foreground">{b.score_a}</span>
+                      </div>
+
+                      {/* Competitor B */}
+                      <div className="flex justify-between items-center text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="w-2 h-2 rounded-full bg-[#0000ff] shrink-0" />
+                          <span className={`font-bold truncate ${b.winner_id === b.participant_b_id ? 'underline text-primary' : 'text-foreground'}`}>
+                            {compB?.full_name || 'TBD'}
+                          </span>
+                        </div>
+                        <span className="font-mono font-extrabold text-foreground">{b.score_b}</span>
+                      </div>
+                    </div>
+
+                    {canModify && onBoutClick && (
+                      <div className="flex justify-end pt-1.5 border-t border-border/30">
+                        <button
+                          onClick={() => onBoutClick(b)}
+                          className="px-2.5 py-1 bg-primary text-primary-foreground hover:bg-primary/95 text-[10px] font-bold rounded-lg cursor-pointer"
+                        >
+                          Resolve Match
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const mainBouts = categoryBouts.filter((b) => b.round_no !== 99);
+  const bronzeBout = categoryBouts.find((b) => b.round_no === 99);
 
   // 2. Determine number of rounds (R) and slots (S)
   const maxRound = Math.max(...mainBouts.map((b) => b.round_no), 1);
@@ -215,7 +412,7 @@ export const SportdataBracket: React.FC<SportdataBracketProps> = ({
     >
       {/* 1. Header Information Block */}
       <div
-        className="flex items-stretch justify-between px-3 py-2 shrink-0 border-b relative"
+        className="flex items-stretch justify-between px-3 py-2 shrink-0 border-b relative z-10"
         style={{
           height: '45px',
           borderColor: theme === 'dark' ? '#1f2937' : '#cbd5e1',
@@ -278,6 +475,49 @@ export const SportdataBracket: React.FC<SportdataBracketProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Floating Zoom Controls */}
+      <div className="absolute bottom-4 right-4 z-20 flex items-center gap-1.5 bg-slate-900/80 backdrop-blur-xs border border-white/10 px-2 py-1.5 rounded-lg shadow-lg no-print">
+        <button
+          type="button"
+          onClick={() => setZoom(prev => Math.max(50, prev - 10))}
+          className="p-1 hover:bg-white/10 rounded text-white text-xs font-bold w-6 h-6 flex items-center justify-center cursor-pointer"
+          title="Zoom Out"
+        >
+          -
+        </button>
+        <span className="text-[10px] text-gray-300 font-mono font-bold w-10 text-center select-none">
+          {zoom}%
+        </span>
+        <button
+          type="button"
+          onClick={() => setZoom(prev => Math.min(150, prev + 10))}
+          className="p-1 hover:bg-white/10 rounded text-white text-xs font-bold w-6 h-6 flex items-center justify-center cursor-pointer"
+          title="Zoom In"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          onClick={() => setZoom(100)}
+          className="px-1.5 py-0.5 hover:bg-white/10 rounded text-gray-300 text-[9px] font-bold cursor-pointer"
+        >
+          Reset
+        </button>
+      </div>
+
+      {/* Scrollable Zoom Wrapper */}
+      <div className="w-full overflow-auto absolute inset-0" style={{ top: '45px', height: 'calc(100% - 45px)' }}>
+        <div
+          className="relative transition-transform duration-200 origin-top-left"
+          style={{
+            transform: `scale(${zoom / 100})`,
+            width: `${100 * (100 / zoom)}%`,
+            height: `${100 * (100 / zoom)}%`,
+            minWidth: '950px',
+            minHeight: '580px'
+          }}
+        >
 
       {/* 2. SVG Connections Canvas */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ top: '50px', height: 'calc(100% - 50px)' }}>
@@ -568,6 +808,8 @@ export const SportdataBracket: React.FC<SportdataBracketProps> = ({
         >
           (c) sportdata GmbH &amp; Co KG 2000-2026 (2026-06-14 18:41) v 12.2.0 build 2 (2026-06-11 10:31 CET) License: University Pertananan Nasional Malaysia MAS (expire 2026-09-11)
         </div>
+      </div>
+      </div>
       </div>
     </div>
   );

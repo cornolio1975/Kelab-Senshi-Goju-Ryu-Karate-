@@ -716,7 +716,7 @@ export const db = {
       }
       return mockStore.bouts.clearDraw(catId);
     },
-    generateDraw: async (catId: string, drawType: 'Elimination' | 'Round-robin', hasThirdPlace: boolean): Promise<Bout[]> => {
+    generateDraw: async (catId: string, drawType: string, hasThirdPlace: boolean): Promise<Bout[]> => {
       console.log('[dbClient.generateDraw] catId:', catId, 'drawType:', drawType, 'hasThirdPlace:', hasThirdPlace, 'isSupabase:', !!supabase);
       if (supabase) {
         // Fetch active mappings from Supabase

@@ -122,9 +122,16 @@ export default function DrawsPage() {
   // Generate Draws Trigger
   const handleGenerateDraw = async () => {
     if (!selectedCatId) return;
+    const bracketStatus = getCategoryBracketStatus(selectedCatId);
+    if (bracketStatus === 'active' || bracketStatus === 'completed') {
+      alert('This bracket is locked because matches have already begun.');
+      return;
+    }
     try {
       setLoading(true);
-      await db.bouts.generateDraw(selectedCatId, 'Elimination', false);
+      const cat = categories.find(c => c.id === selectedCatId);
+      const format = cat?.format || 'knockout';
+      await db.bouts.generateDraw(selectedCatId, format, false);
       // Reload lists
       const updatedBouts = await db.bouts.list();
       setBouts(updatedBouts);
@@ -193,6 +200,11 @@ export default function DrawsPage() {
   // Clear Draws Trigger
   const handleClearDraw = async () => {
     if (!selectedCatId) return;
+    const bracketStatus = getCategoryBracketStatus(selectedCatId);
+    if (bracketStatus === 'active' || bracketStatus === 'completed') {
+      alert('This bracket is locked because matches have already begun.');
+      return;
+    }
     try {
       setLoading(true);
       await db.bouts.clearDraw(selectedCatId);
@@ -255,6 +267,8 @@ export default function DrawsPage() {
 
   const roundsData = getBoutsByRounds();
   const thirdPlaceMatch = categoryBouts.find(b => b.round_no === 99);
+  const bracketStatus = currentCategory ? getCategoryBracketStatus(currentCategory.id) : 'non-active';
+  const isBracketLocked = bracketStatus === 'active' || bracketStatus === 'completed';
 
   // Helper renderer: Competitor detail
   const renderCompetitorRow = (participantId: string | null, score: number, isWinner: boolean, tagColor: string) => {
@@ -456,11 +470,21 @@ export default function DrawsPage() {
             {/* Draw Parameters configuration card (KumiteTechnology style) */}
             <div className="bg-card border border-border p-5 rounded-xl shadow-xs flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-4">
               <div className="space-y-3">
-                <h3 className="font-extrabold text-sm text-foreground uppercase tracking-wider">
-                  Active Bracket: <span className="text-primary normal-case">{currentCategory.name}</span>
+                <h3 className="font-extrabold text-sm text-foreground uppercase tracking-wider flex items-center gap-2">
+                  <span>Active Bracket:</span>
+                  <span className="text-primary normal-case">{currentCategory.name}</span>
+                  {isBracketLocked && (
+                    <span className="px-2 py-0.5 text-[9px] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-md uppercase tracking-widest animate-pulse">
+                      Locked
+                    </span>
+                  )}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  Standard Draw System (Single Elimination)
+                  Format: {
+                    currentCategory.format === 'round_robin' ? 'Round Robin System' :
+                    currentCategory.format === 'wkf_repechage' ? 'WKF Repechage System' :
+                    'Single Elimination (Knockout)'
+                  }
                 </p>
               </div>
 
@@ -469,8 +493,9 @@ export default function DrawsPage() {
                 {canModify && categoryBouts.length > 0 && (
                   <button
                     onClick={handleClearDraw}
-                    disabled={loading}
-                    className="px-3 py-2 border border-red-500/20 text-red-500 hover:bg-red-500/10 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    disabled={loading || isBracketLocked}
+                    className="px-3 py-2 border border-red-500/20 text-red-500 hover:bg-red-500/10 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={isBracketLocked ? "Cannot clear locked bracket" : "Clear bracket matches"}
                   >
                     <Trash2 className="h-4 w-4" />
                     <span>Clear</span>
@@ -479,8 +504,9 @@ export default function DrawsPage() {
                 {canModify && (
                   <button
                     onClick={handleGenerateDraw}
-                    disabled={loading}
-                    className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                    disabled={loading || isBracketLocked}
+                    className="px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/95 rounded-lg text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title={isBracketLocked ? "Cannot regenerate locked bracket" : "Generate/Regenerate bracket matches"}
                   >
                     <Sparkles className="h-4 w-4 text-white" />
                     <span>{categoryBouts.length > 0 ? 'Regenerate Bracket' : 'Generate Bracket'}</span>
