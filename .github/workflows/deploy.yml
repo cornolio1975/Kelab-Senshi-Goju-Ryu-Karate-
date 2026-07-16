@@ -28,7 +28,6 @@ jobs:
       - name: Build Next.js Static Export 🚀
         run: npm run build
         env:
-          NEXT_PUBLIC_BASE_PATH: /Kelab-Senshi-Goju-Ryu-Karate-
           NEXT_PUBLIC_SUPABASE_URL: https://baoiiwfxfbvjfsfdmhjm.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_QuJS043IZONU1brj_3YhSA_lIUEXeM8
 

@@ -20,7 +20,7 @@ if (isSupabaseConfigured) {
   }
 }
 
-export const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
+export const basePath = '/Kelab-Senshi-Goju-Ryu-Karate-';
 
 // Global DB client interface
 export const db = {
