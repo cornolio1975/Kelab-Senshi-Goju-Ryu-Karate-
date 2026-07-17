@@ -53,6 +53,7 @@ export default function ScoreboardDashboardPage() {
 
   // Filter bouts
   const filteredBouts = bouts.filter(b => {
+    if (b.status === 'Walkover') return false;
     const matchesCat = selectedCatId === 'ALL' || b.category_id === selectedCatId;
     const matchesStatus = selectedStatus === 'ALL' || b.status === selectedStatus;
     const matchesTatami = selectedTatami === 'ALL' || (b.tatami || 'Tatami 1') === selectedTatami;

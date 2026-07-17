@@ -27,7 +27,7 @@ We have successfully implemented the Round Robin System, WKF Repechage System, t
   * Tracks points history arrays and syncs them over the BroadcastChannel (`wkf-scoreboard-sync`).
   * Serializes events as JSON strings on match finish and clears history on rematch resets.
   * Pushes history to the undo stack.
-* **[display/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/display/page.tsx)**:
+* **[display/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%252520Karate/src/app/display/page.tsx)**:
   * Receives broadcast event payloads and reads settings dynamically.
   * Renders badges underneath the total score.
   * Supports real-time fallback updates via Supabase.
@@ -53,6 +53,8 @@ We have successfully implemented the Round Robin System, WKF Repechage System, t
   * Excluded bouts with `status === 'Walkover'` from the Match Console Hub picker to prevent them from showing up for scoring.
 * **[bouts/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/bouts/page.tsx)**:
   * Excluded bouts with `status === 'Walkover'` from the main Scoring Management control lists.
+* **[dashboard/scoreboard/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/dashboard/scoreboard/page.tsx)**:
+  * Excluded bouts with `status === 'Walkover'` from the dashboard Match Console Hub list picker.
 
 ---
 
