@@ -192,8 +192,8 @@ describe('Karate Tournament Draw Generator Tests', () => {
       expect(round1[1].status).toBe('Scheduled');
       expect(round1[1].winner_id).toBeNull();
 
-      // Round 2 bout should start empty (scheduled, no participants initially assigned)
-      expect(round2[0].participant_a_id).toBeNull();
+      // Round 2 bout should have part-1 populated due to walkover propagation
+      expect(round2[0].participant_a_id).toBe('part-1');
       expect(round2[0].participant_b_id).toBeNull();
       expect(round2[0].status).toBe('Scheduled');
     });
@@ -229,6 +229,41 @@ describe('Karate Tournament Draw Generator Tests', () => {
 
       const thirdPlaceBout = bouts.find(b => b.round_no === 99);
       expect(thirdPlaceBout).toBeUndefined();
+    });
+
+    it('propagates cascading walkovers correctly (e.g. 5 participants, slots = 8)', () => {
+      const participants = createParticipants(5);
+      const mappings = createMappings(participants.map(p => p.id), catId);
+
+      localStorage.setItem('ts_participants', JSON.stringify(participants));
+      localStorage.setItem('ts_participant_categories', JSON.stringify(mappings));
+
+      const bouts = mockStore.bouts.generateDraw(catId, 'Elimination', false);
+
+      // 5 participants -> slots = 8 -> 4 bouts in round 1, 2 bouts in round 2, 1 bout in round 3
+      // Total bouts = 7
+      expect(bouts.length).toBe(7);
+
+      const r1 = bouts.filter(b => b.round_no === 1);
+      const r2 = bouts.filter(b => b.round_no === 2);
+      const r3 = bouts.filter(b => b.round_no === 3);
+
+      expect(r1[0].winner_id).toBe('part-1');
+      expect(r1[0].status).toBe('Walkover');
+      expect(r1[1].winner_id).toBeNull();
+      expect(r1[1].status).toBe('Scheduled');
+      expect(r1[2].winner_id).toBe('part-2');
+      expect(r1[2].status).toBe('Walkover');
+      expect(r1[3].winner_id).toBe('part-3');
+      expect(r1[3].status).toBe('Walkover');
+
+      expect(r2[0].participant_a_id).toBe('part-1');
+      expect(r2[0].participant_b_id).toBeNull();
+      expect(r2[0].status).toBe('Scheduled');
+
+      expect(r2[1].participant_a_id).toBe('part-2');
+      expect(r2[1].participant_b_id).toBe('part-3');
+      expect(r2[1].status).toBe('Scheduled');
     });
   });
 

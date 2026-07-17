@@ -1,6 +1,6 @@
-# Walkthrough: Tournament Brackets, Scoreboard Point History & Category Editing
+# Walkthrough: Tournament Brackets, Scoreboard Point History, Category Editing & Auto-Walkovers
 
-We have successfully implemented the Round Robin System, WKF Repechage System, the Technique Point History Display optional feature, and the ability to edit and modify categories directly within Category Management. All features are fully verified, unit-tested, built, and ready for deployment.
+We have successfully implemented the Round Robin System, WKF Repechage System, the Technique Point History Display optional feature, the ability to edit and modify categories directly within Category Management, and automatic walkover/bye propagation for single elimination brackets. All features are fully verified, unit-tested, built, and ready for deployment.
 
 ## 1. Summary of Changes
 
@@ -40,16 +40,27 @@ We have successfully implemented the Round Robin System, WKF Repechage System, t
   * Implemented `handleEditSubmit` form handler connecting to `db.categories.update`.
   * Added the fully-featured Edit Category Dialog modal containing all editable category parameters (Name, Gender, Status, Age/Weight limits, Capacity, and Format).
 
+### D. Auto-Walkovers & Bye Propagation
+
+* **[mockStore.ts](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/db/mockStore.ts)**:
+  * Embedded a recursive walkover resolution loop in `generateDraw`. If any fighter has no opponent (a bye), they win by walkover, and their name is automatically pushed to the next round bout.
+  * Replaced the single-step winner advancement logic in `updateBoutResult` with the recursive propagation loop to handle cascading walkovers dynamically.
+* **[dbClient.ts](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/db/dbClient.ts)**:
+  * Implemented the identical walkover propagation loop inside `updateBoutResult` (Supabase branch) to dynamically update match statuses in database tables.
+* **[draws.test.ts](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/db/draws.test.ts)**:
+  * Added a dedicated unit test case validating cascading walkover resolution for 5 participants (slots = 8).
+
 ---
 
 ## 2. Validation & Testing
 
 ### Automated Test Coverage
-All **47 tests** (including those verifying the new draw systems and scoreboard progressions) have passed successfully:
+All **48 tests** (including those verifying the new draws, scoreboard technique history, and cascading walkovers) have passed successfully:
+* Correct auto-walkover status and winner assignment when generating a draw containing byes.
+* Correct cascading propagation of winners into Round 2 and Round 3.
 * JSON parsing vs legacy comma-separated lists fallback logic.
 * Technique events insertion and correct subtraction on Undo actions.
 * Round Robin ranking calculation and sorting under WKF tie-breaking rules.
-* Automatic WKF Repechage generation for quarterfinalists.
 
 ### Manual Verification
 * Static HTML/JS production build compiled with Turbopack successfully (`npm run build`).

@@ -1256,6 +1256,59 @@ export const mockStore = {
         }
       }
 
+      if (drawType !== 'Round-robin' && drawType !== 'round_robin') {
+        const maxRound = Math.max(...generatedBouts.filter(b => b.round_no !== 99 && b.round_no !== 98).map(b => b.round_no), 1);
+        let changes = true;
+        while (changes) {
+          changes = false;
+          for (let r = 1; r < maxRound; r++) {
+            const currentRoundBouts = generatedBouts.filter(b => b.round_no === r);
+            const nextRoundBouts = generatedBouts.filter(b => b.round_no === r + 1);
+            
+            for (const nb of nextRoundBouts) {
+              const feederA = currentRoundBouts.find(cb => cb.bout_no === nb.bout_no * 2 - 1);
+              const feederB = currentRoundBouts.find(cb => cb.bout_no === nb.bout_no * 2);
+              
+              let nextA = nb.participant_a_id;
+              let nextB = nb.participant_b_id;
+              let nextWinner = nb.winner_id;
+              let nextStatus = nb.status;
+              
+              if (feederA && feederA.winner_id !== nb.participant_a_id) {
+                nextA = feederA.winner_id;
+              }
+              if (feederB && feederB.winner_id !== nb.participant_b_id) {
+                nextB = feederB.winner_id;
+              }
+              
+              const feederAResolved = feederA ? (feederA.status === 'Completed' || feederA.status === 'Walkover') : true;
+              const feederBResolved = feederB ? (feederB.status === 'Completed' || feederB.status === 'Walkover') : true;
+              
+              if (feederAResolved && feederBResolved) {
+                if (nextA && !nextB) {
+                  nextWinner = nextA;
+                  nextStatus = 'Walkover';
+                } else if (!nextA && nextB) {
+                  nextWinner = nextB;
+                  nextStatus = 'Walkover';
+                } else if (!nextA && !nextB) {
+                  nextWinner = null;
+                  nextStatus = 'Walkover';
+                }
+              }
+              
+              if (nb.participant_a_id !== nextA || nb.participant_b_id !== nextB || nb.winner_id !== nextWinner || nb.status !== nextStatus) {
+                nb.participant_a_id = nextA;
+                nb.participant_b_id = nextB;
+                nb.winner_id = nextWinner;
+                nb.status = nextStatus;
+                changes = true;
+              }
+            }
+          }
+        }
+      }
+
       saveStoreData('ts_bouts', [...allBouts, ...generatedBouts]);
       return generatedBouts;
     },
@@ -1281,18 +1334,54 @@ export const mockStore = {
           list[nextBoutIdx] = { ...list[nextBoutIdx], participant_a_id: winnerId };
         }
       } else if (bout.round_no !== 99 && bout.round_no < 7) {
-        const nextRoundNo = bout.round_no + 1;
-        const nextBoutNo = Math.ceil(bout.bout_no / 2);
-        const nextBoutIdx = list.findIndex(b => b.category_id === bout.category_id && b.round_no === nextRoundNo && b.bout_no === nextBoutNo);
-        
-        if (nextBoutIdx !== -1) {
-          const isSlotA = bout.bout_no % 2 !== 0;
-          const nextBout = list[nextBoutIdx];
-          
-          if (isSlotA) {
-            list[nextBoutIdx] = { ...nextBout, participant_a_id: winnerId };
-          } else {
-            list[nextBoutIdx] = { ...nextBout, participant_b_id: winnerId };
+        const maxRound = Math.max(...list.filter(b => b.category_id === bout.category_id && b.round_no !== 99 && b.round_no !== 98).map(b => b.round_no), 1);
+        let changes = true;
+        while (changes) {
+          changes = false;
+          for (let r = 1; r < maxRound; r++) {
+            const currentRoundBouts = list.filter(b => b.category_id === bout.category_id && b.round_no === r);
+            const nextRoundBouts = list.filter(b => b.category_id === bout.category_id && b.round_no === r + 1);
+            
+            for (const nb of nextRoundBouts) {
+              const feederA = currentRoundBouts.find(cb => cb.bout_no === nb.bout_no * 2 - 1);
+              const feederB = currentRoundBouts.find(cb => cb.bout_no === nb.bout_no * 2);
+              
+              let nextA = nb.participant_a_id;
+              let nextB = nb.participant_b_id;
+              let nextWinner = nb.winner_id;
+              let nextStatus = nb.status;
+              
+              if (feederA && feederA.winner_id !== nb.participant_a_id) {
+                nextA = feederA.winner_id;
+              }
+              if (feederB && feederB.winner_id !== nb.participant_b_id) {
+                nextB = feederB.winner_id;
+              }
+              
+              const feederAResolved = feederA ? (feederA.status === 'Completed' || feederA.status === 'Walkover') : true;
+              const feederBResolved = feederB ? (feederB.status === 'Completed' || feederB.status === 'Walkover') : true;
+              
+              if (feederAResolved && feederBResolved) {
+                if (nextA && !nextB) {
+                  nextWinner = nextA;
+                  nextStatus = 'Walkover';
+                } else if (!nextA && nextB) {
+                  nextWinner = nextB;
+                  nextStatus = 'Walkover';
+                } else if (!nextA && !nextB) {
+                  nextWinner = null;
+                  nextStatus = 'Walkover';
+                }
+              }
+              
+              if (nb.participant_a_id !== nextA || nb.participant_b_id !== nextB || nb.winner_id !== nextWinner || nb.status !== nextStatus) {
+                nb.participant_a_id = nextA;
+                nb.participant_b_id = nextB;
+                nb.winner_id = nextWinner;
+                nb.status = nextStatus;
+                changes = true;
+              }
+            }
           }
         }
       }
