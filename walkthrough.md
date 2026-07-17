@@ -1,6 +1,6 @@
-# Walkthrough: Tournament Brackets & Scoreboard Point History Display
+# Walkthrough: Tournament Brackets, Scoreboard Point History & Category Editing
 
-We have successfully implemented the Round Robin System, WKF Repechage System, and the Technique Point History Display optional feature. All features are fully verified, unit-tested, built, and ready for deployment.
+We have successfully implemented the Round Robin System, WKF Repechage System, the Technique Point History Display optional feature, and the ability to edit and modify categories directly within Category Management. All features are fully verified, unit-tested, built, and ready for deployment.
 
 ## 1. Summary of Changes
 
@@ -31,6 +31,14 @@ We have successfully implemented the Round Robin System, WKF Repechage System, a
   * Receives broadcast event payloads and reads settings dynamically.
   * Renders badges underneath the total score.
   * Supports real-time fallback updates via Supabase.
+
+### C. Category Editing Capability
+
+* **[categories/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/categories/page.tsx)**:
+  * Added `Edit2` icon next to the Delete Category button for categories.
+  * Added `isEditOpen` and `editCat` state to manage the selected category and dialog display.
+  * Implemented `handleEditSubmit` form handler connecting to `db.categories.update`.
+  * Added the fully-featured Edit Category Dialog modal containing all editable category parameters (Name, Gender, Status, Age/Weight limits, Capacity, and Format).
 
 ---
 

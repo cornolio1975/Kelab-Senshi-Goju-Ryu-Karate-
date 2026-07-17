@@ -7,7 +7,7 @@ import { db } from '@/db/dbClient';
 import { Category, Participant, Club, Bout } from '@/db/types';
 import { basePath } from '@/db/dbClient';
 import { 
-  Plus, Tags, Merge, Split, Move, X, Check, AlertCircle, RefreshCw, Trash2, Monitor, ChevronRight
+  Plus, Tags, Merge, Split, Move, X, Check, AlertCircle, RefreshCw, Trash2, Edit2, Monitor, ChevronRight
 } from 'lucide-react';
 
 export default function CategoriesPage() {
@@ -48,6 +48,8 @@ export default function CategoriesPage() {
   } | null>(null);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [editCat, setEditCat] = useState<Category | null>(null);
   const [newCat, setNewCat] = useState({
     name: '',
     gender: 'Male' as any,
@@ -238,6 +240,23 @@ export default function CategoriesPage() {
     }
   };
 
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editCat) return;
+    try {
+      setLoading(true);
+      await db.categories.update(editCat.id, editCat);
+      alert('Category updated successfully.');
+      setIsEditOpen(false);
+      setEditCat(null);
+      triggerRefresh();
+    } catch (err: any) {
+      alert(err.message || 'Failed to update category.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCat.name) {
@@ -381,13 +400,25 @@ export default function CategoriesPage() {
                       )}
                     </div>
                     {canModify && (
-                      <button
-                        onClick={() => handleDeleteCategory(cat.id)}
-                        className="p-1 hover:bg-secondary text-muted-foreground hover:text-red-500 rounded transition-colors cursor-pointer"
-                        title="Delete Category"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => {
+                            setEditCat(cat);
+                            setIsEditOpen(true);
+                          }}
+                          className="p-1 hover:bg-secondary text-muted-foreground hover:text-primary rounded transition-colors cursor-pointer"
+                          title="Edit Category"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCategory(cat.id)}
+                          className="p-1 hover:bg-secondary text-muted-foreground hover:text-red-500 rounded transition-colors cursor-pointer"
+                          title="Delete Category"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -1018,6 +1049,144 @@ export default function CategoriesPage() {
                 className="px-4 py-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-lg cursor-pointer"
               >
                 Add Category
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+      {/* E. EDIT CATEGORY DIALOG */}
+      {isEditOpen && editCat && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-30 p-4">
+          <form onSubmit={handleEditSubmit} className="bg-card w-full max-w-md rounded-xl shadow-xl border border-border overflow-hidden animate-scale-in text-foreground">
+            <div className="p-5 border-b border-border bg-secondary/10 flex justify-between items-center">
+              <span className="font-bold text-sm">Edit Category</span>
+              <button type="button" onClick={() => { setIsEditOpen(false); setEditCat(null); }} className="p-1 text-muted-foreground hover:text-foreground">
+                <X className="h-4.5 w-4.5" />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div>
+                <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Category Name</label>
+                <input
+                  type="text"
+                  required
+                  value={editCat.name}
+                  onChange={(e) => setEditCat({ ...editCat, name: e.target.value })}
+                  className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none focus:ring-1 focus:ring-primary text-foreground"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Gender Focus</label>
+                  <select
+                    value={editCat.gender}
+                    onChange={(e) => setEditCat({ ...editCat, gender: e.target.value as any })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  >
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Mixed">Mixed</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Status</label>
+                  <select
+                    value={editCat.status}
+                    onChange={(e) => setEditCat({ ...editCat, status: e.target.value as any })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  >
+                    <option value="Open">Open</option>
+                    <option value="Closed">Closed</option>
+                    <option value="Full">Full</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Min Age (Years)</label>
+                  <input
+                    type="number"
+                    required
+                    value={editCat.min_age}
+                    onChange={(e) => setEditCat({ ...editCat, min_age: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Max Age (Years)</label>
+                  <input
+                    type="number"
+                    required
+                    value={editCat.max_age}
+                    onChange={(e) => setEditCat({ ...editCat, max_age: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Min Weight (kg)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={editCat.min_weight}
+                    onChange={(e) => setEditCat({ ...editCat, min_weight: parseFloat(e.target.value) })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Max Weight (kg)</label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    value={editCat.max_weight}
+                    onChange={(e) => setEditCat({ ...editCat, max_weight: parseFloat(e.target.value) })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Capacity Limits</label>
+                  <input
+                    type="number"
+                    required
+                    value={editCat.capacity}
+                    onChange={(e) => setEditCat({ ...editCat, capacity: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Tournament Format</label>
+                  <select
+                    value={editCat.format || 'knockout'}
+                    onChange={(e) => setEditCat({ ...editCat, format: e.target.value as any })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  >
+                    <option value="knockout">Single Elimination</option>
+                    <option value="round_robin">Round Robin System</option>
+                    <option value="wkf_repechage">WKF Repechage System</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-border flex justify-end gap-2 bg-secondary/5">
+              <button type="button" onClick={() => { setIsEditOpen(false); setEditCat(null); }} className="px-3 py-1.5 border border-border text-muted-foreground hover:text-foreground rounded-lg text-xs font-semibold cursor-pointer">
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-lg cursor-pointer"
+              >
+                Save Changes
               </button>
             </div>
           </form>
