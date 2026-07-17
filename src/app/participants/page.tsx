@@ -37,6 +37,7 @@ export default function ParticipantsPage() {
   const [countries, setCountries] = useState<Country[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [mappings, setMappings] = useState<any[]>([]);
   
   // Active states
   const [selectedPartId, setSelectedPartId] = useState<string | null>(null);
@@ -65,18 +66,20 @@ export default function ParticipantsPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [pList, cList, cntList, catList, coList] = await Promise.all([
+      const [pList, cList, cntList, catList, coList, pcList] = await Promise.all([
         db.participants.list(),
         db.clubs.list(),
         db.countries.list(),
         db.categories.list(),
-        db.coaches.list()
+        db.coaches.list(),
+        db.participantCategories.list()
       ]);
       setParticipants(pList);
       setClubs(cList);
       setCountries(cntList);
       setCategories(catList);
       setCoaches(coList);
+      setMappings(pcList);
     } catch (e) {
       console.error('Error loading participants data:', e);
     } finally {
@@ -122,8 +125,6 @@ export default function ParticipantsPage() {
 
   // Get count of participants currently in a category
   const getCategoryCountInfo = (catId: string) => {
-    const rawpc = localStorage.getItem('ts_participant_categories');
-    const mappings = rawpc ? JSON.parse(rawpc) : [];
     const matchedParts = mappings.filter((m: any) => m.category_id === catId).map((m: any) => m.participant_id);
     const activeInCat = participants.filter(p => matchedParts.includes(p.id));
     
@@ -213,8 +214,6 @@ export default function ParticipantsPage() {
 
     // 2. Left side-panel Category filter
     if (selectedCatId) {
-      const rawpc = localStorage.getItem('ts_participant_categories');
-      const mappings = rawpc ? JSON.parse(rawpc) : [];
       const isAssigned = mappings.some((m: any) => m.participant_id === p.id && m.category_id === selectedCatId);
       if (!isAssigned) return false;
     }
@@ -567,8 +566,6 @@ export default function ParticipantsPage() {
                     const clubName = clubs.find(c => c.id === p.club_id)?.name || 'Independent';
                     
                     // Category Mapping client-side lookup
-                    const rawMappings = localStorage.getItem('ts_participant_categories');
-                    const mappings = rawMappings ? JSON.parse(rawMappings) : [];
                     const catId = mappings.find((m: any) => m.participant_id === p.id)?.category_id;
                     const cat = categories.find(c => c.id === catId);
 

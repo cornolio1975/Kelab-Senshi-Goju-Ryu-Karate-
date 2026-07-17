@@ -132,8 +132,7 @@ export default function EditParticipantDrawer({ participantId, onClose }: EditPa
 
         // Fetch category
         const mapping = await db.participants.getAssignedCategory(p.id);
-        const allMappings = localStorage.getItem('ts_participant_categories');
-        const listMappings = allMappings ? JSON.parse(allMappings) : [];
+        const listMappings = await db.participantCategories.list();
         const thisMapping = listMappings.find((m: any) => m.participant_id === p.id);
         
         setAssignedCat(mapping || null);

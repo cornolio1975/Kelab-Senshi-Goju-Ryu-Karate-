@@ -66,19 +66,18 @@ export default function CategoriesPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [catList, pList, clList, bList] = await Promise.all([
+      const [catList, pList, clList, bList, pcList] = await Promise.all([
         db.categories.list(),
         db.participants.list(),
         db.clubs.list(),
-        db.bouts.list()
+        db.bouts.list(),
+        db.participantCategories.list()
       ]);
       setCategories(catList);
       setParticipants(pList);
       setClubs(clList);
       setBouts(bList);
-
-      const rawpc = localStorage.getItem('ts_participant_categories');
-      setMappings(rawpc ? JSON.parse(rawpc) : []);
+      setMappings(pcList);
     } catch (e) {
       console.error(e);
     } finally {
