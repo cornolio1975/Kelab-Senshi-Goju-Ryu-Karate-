@@ -898,9 +898,9 @@ export default function ScoreboardControlPage() {
       setShowFinishModal(false);
       // Navigate back to Match Console Hub for the same category, or fall back to bouts
       if (catId) {
-        router.push(`${basePath}/categories?console=${catId}`);
+        router.push(`/categories?console=${catId}`);
       } else {
-        router.push(`${basePath}/bouts`);
+        router.push(`/bouts`);
       }
     } catch (err) {
       console.error('Error saving bout result:', err);

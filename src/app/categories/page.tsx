@@ -544,7 +544,7 @@ export default function CategoriesPage() {
                         key={bout.id}
                         onClick={() => {
                           setConsoleCat(null);
-                          router.push(`${basePath}/dashboard/control?boutId=${bout.id}&catId=${consoleCat.id}`);
+                          router.push(`/dashboard/control?boutId=${bout.id}&catId=${consoleCat.id}`);
                         }}
                         className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all duration-150 cursor-pointer text-left group ${
                           isRunning
