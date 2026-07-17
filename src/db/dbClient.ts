@@ -20,7 +20,8 @@ if (isSupabaseConfigured) {
   }
 }
 
-export const basePath = '/Kelab-Senshi-Goju-Ryu-Karate-';
+const isDev = process.env.NODE_ENV === 'development';
+export const basePath = isDev ? '' : (process.env.NEXT_PUBLIC_BASE_PATH ?? '/Kelab-Senshi-Goju-Ryu-Karate-');
 
 // Global DB client interface
 export const db = {
@@ -716,7 +717,7 @@ export const db = {
       }
       return mockStore.bouts.clearDraw(catId);
     },
-    generateDraw: async (catId: string, drawType: 'Elimination' | 'Round-robin', hasThirdPlace: boolean): Promise<Bout[]> => {
+    generateDraw: async (catId: string, drawType: string, hasThirdPlace: boolean): Promise<Bout[]> => {
       console.log('[dbClient.generateDraw] catId:', catId, 'drawType:', drawType, 'hasThirdPlace:', hasThirdPlace, 'isSupabase:', !!supabase);
       if (supabase) {
         // Fetch active mappings from Supabase

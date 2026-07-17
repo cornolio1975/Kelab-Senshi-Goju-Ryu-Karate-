@@ -73,6 +73,10 @@ export default function SettingsPage() {
   const [upcomingVenue, setUpcomingVenue] = useState('Dewan Serbaguna Petaling Jaya');
   const [upcomingCity, setUpcomingCity] = useState('Petaling Jaya, Selangor');
 
+  const [showPointHistoryReferee, setShowPointHistoryReferee] = useState(false);
+  const [showPointHistoryPublic, setShowPointHistoryPublic] = useState(false);
+  const [showPointHistoryStream, setShowPointHistoryStream] = useState(false);
+
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const storedName = localStorage.getItem('ts_upcoming_name');
@@ -87,6 +91,10 @@ export default function SettingsPage() {
       if (storedVenue !== null) setUpcomingVenue(storedVenue);
       const storedCity = localStorage.getItem('ts_upcoming_city');
       if (storedCity !== null) setUpcomingCity(storedCity);
+
+      setShowPointHistoryReferee(localStorage.getItem('ts_show_point_history_referee') === 'true');
+      setShowPointHistoryPublic(localStorage.getItem('ts_show_point_history_public') === 'true');
+      setShowPointHistoryStream(localStorage.getItem('ts_show_point_history_stream') === 'true');
     }
   }, []);
 
@@ -145,6 +153,10 @@ export default function SettingsPage() {
         localStorage.setItem('ts_upcoming_reg_close', upcomingRegClose);
         localStorage.setItem('ts_upcoming_venue', upcomingVenue);
         localStorage.setItem('ts_upcoming_city', upcomingCity);
+
+        localStorage.setItem('ts_show_point_history_referee', String(showPointHistoryReferee));
+        localStorage.setItem('ts_show_point_history_public', String(showPointHistoryPublic));
+        localStorage.setItem('ts_show_point_history_stream', String(showPointHistoryStream));
       }
 
       // Sync active tournament name to Supabase
@@ -667,6 +679,71 @@ export default function SettingsPage() {
             <p className="text-[10px] text-muted-foreground">
               Provide an iframe-friendly embed URL (e.g. <code>https://www.youtube.com/embed/dQw4w9WgXcQ</code>).
             </p>
+          </div>
+        </div>
+
+        {/* Scoreboard Settings */}
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4 shadow-xs">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+            Scoreboard Settings
+          </h2>
+          <div className="space-y-4">
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="showPointHistoryReferee"
+                checked={showPointHistoryReferee}
+                onChange={(e) => setShowPointHistoryReferee(e.target.checked)}
+                disabled={!canModify}
+                className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+              />
+              <div>
+                <label htmlFor="showPointHistoryReferee" className="text-xs font-semibold text-foreground block cursor-pointer select-none">
+                  Show Point History on Referee Screen
+                </label>
+                <p className="text-[10px] text-muted-foreground">
+                  Displays fighter scoring history below the total points on the match official scoring console (/scoring).
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="showPointHistoryPublic"
+                checked={showPointHistoryPublic}
+                onChange={(e) => setShowPointHistoryPublic(e.target.checked)}
+                disabled={!canModify}
+                className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+              />
+              <div>
+                <label htmlFor="showPointHistoryPublic" className="text-xs font-semibold text-foreground block cursor-pointer select-none">
+                  Show Point History on Public Scoreboard
+                </label>
+                <p className="text-[10px] text-muted-foreground">
+                  Displays fighter scoring history below the total points on the public spectator screen (/display).
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="showPointHistoryStream"
+                checked={showPointHistoryStream}
+                onChange={(e) => setShowPointHistoryStream(e.target.checked)}
+                disabled={!canModify}
+                className="mt-1 h-4 w-4 rounded border-border text-primary focus:ring-primary cursor-pointer"
+              />
+              <div>
+                <label htmlFor="showPointHistoryStream" className="text-xs font-semibold text-foreground block cursor-pointer select-none">
+                  Show Point History on Live Streaming Display
+                </label>
+                <p className="text-[10px] text-muted-foreground">
+                  Hides/shows the scoring history layout specifically on stream overlay setups.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 

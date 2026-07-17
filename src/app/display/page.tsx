@@ -38,6 +38,9 @@ function SpectatorDisplayContent() {
   // Detailed WKF warnings states: C1, C2, C3, HC, H (1 to 5)
   const [c1Aka, setC1Aka] = useState<number>(0);
   const [c1Ao, setC1Ao] = useState<number>(0);
+  const [eventsAka, setEventsAka] = useState<{ fighter: string; points: number; technique: string; timestamp: number; matchId: string }[]>([]);
+  const [eventsAo, setEventsAo] = useState<{ fighter: string; points: number; technique: string; timestamp: number; matchId: string }[]>([]);
+  const [showPointHistory, setShowPointHistory] = useState(false);
 
   // Timer states
   const [timeLeft, setTimeLeft] = useState<number>(1800);
@@ -211,6 +214,10 @@ function SpectatorDisplayContent() {
       const channel = new BroadcastChannel('wkf-scoreboard-sync');
       broadcastChannelRef.current = channel;
 
+      const isStream = searchParams.get('stream') === 'true' || searchParams.get('overlay') === 'true';
+      const key = isStream ? 'ts_show_point_history_stream' : 'ts_show_point_history_public';
+      setShowPointHistory(localStorage.getItem(key) === 'true');
+
       channel.onmessage = (event) => {
         const data = event.data;
         if (data.type === 'MATCH_FINISHED') {
@@ -233,6 +240,8 @@ function SpectatorDisplayContent() {
           setPenaltiesAo(data.penaltiesAo || []);
           setC1Aka(data.c1Aka || 0);
           setC1Ao(data.c1Ao || 0);
+          setEventsAka(data.eventsAka || []);
+          setEventsAo(data.eventsAo || []);
           setTimeLeft(data.timeLeft);
           setTimerActive(data.timerActive);
           setGoldenScore(data.goldenScore);
@@ -245,7 +254,7 @@ function SpectatorDisplayContent() {
     return () => {
       broadcastChannelRef.current?.close();
     };
-  }, [boutId]);
+  }, [boutId, searchParams]);
 
   // Initial load from Database client
   useEffect(() => {
@@ -280,6 +289,49 @@ function SpectatorDisplayContent() {
           setScoreAo(bout.score_b ?? 0);
           setSenshuAka(bout.senshu_a ?? false);
           setSenshuAo(bout.senshu_b ?? false);
+          let parsedEventsAka: { fighter: string; points: number; technique: string; timestamp: number; matchId: string }[] = [];
+          let parsedEventsAo: { fighter: string; points: number; technique: string; timestamp: number; matchId: string }[] = [];
+
+          if (bout.points_aka_history) {
+            if (bout.points_aka_history.startsWith('[')) {
+              try {
+                parsedEventsAka = JSON.parse(bout.points_aka_history);
+              } catch (e) {
+                console.error(e);
+              }
+            } else {
+              const pointsList = bout.points_aka_history.split(',').map(Number).filter(Boolean);
+              parsedEventsAka = pointsList.map((pts: number) => ({
+                fighter: 'AKA',
+                points: pts,
+                technique: pts === 1 ? 'Yuko' : pts === 2 ? 'Waza-ari' : pts === 3 ? 'Ippon' : 'Point',
+                timestamp: 0,
+                matchId: bout.id
+              }));
+            }
+          }
+
+          if (bout.points_ao_history) {
+            if (bout.points_ao_history.startsWith('[')) {
+              try {
+                parsedEventsAo = JSON.parse(bout.points_ao_history);
+              } catch (e) {
+                console.error(e);
+              }
+            } else {
+              const pointsList = bout.points_ao_history.split(',').map(Number).filter(Boolean);
+              parsedEventsAo = pointsList.map((pts: number) => ({
+                fighter: 'AO',
+                points: pts,
+                technique: pts === 1 ? 'Yuko' : pts === 2 ? 'Waza-ari' : pts === 3 ? 'Ippon' : 'Point',
+                timestamp: 0,
+                matchId: bout.id
+              }));
+            }
+          }
+
+          setEventsAka(parsedEventsAka);
+          setEventsAo(parsedEventsAo);
           setPenaltiesAka(bout.penalties_a ? bout.penalties_a.split(',').filter(Boolean) : []);
           setPenaltiesAo(bout.penalties_b ? bout.penalties_b.split(',').filter(Boolean) : []);
           
@@ -313,6 +365,49 @@ function SpectatorDisplayContent() {
             setScoreAo(updated.score_b ?? 0);
             setSenshuAka(updated.senshu_a ?? false);
             setSenshuAo(updated.senshu_b ?? false);
+            let parsedEventsAka: { fighter: string; points: number; technique: string; timestamp: number; matchId: string }[] = [];
+            let parsedEventsAo: { fighter: string; points: number; technique: string; timestamp: number; matchId: string }[] = [];
+
+            if (updated.points_aka_history) {
+              if (updated.points_aka_history.startsWith('[')) {
+                try {
+                  parsedEventsAka = JSON.parse(updated.points_aka_history);
+                } catch (e) {
+                  console.error(e);
+                }
+              } else {
+                const pointsList = updated.points_aka_history.split(',').map(Number).filter(Boolean);
+                parsedEventsAka = pointsList.map((pts: number) => ({
+                  fighter: 'AKA',
+                  points: pts,
+                  technique: pts === 1 ? 'Yuko' : pts === 2 ? 'Waza-ari' : pts === 3 ? 'Ippon' : 'Point',
+                  timestamp: 0,
+                  matchId: boutId!
+                }));
+              }
+            }
+
+            if (updated.points_ao_history) {
+              if (updated.points_ao_history.startsWith('[')) {
+                try {
+                  parsedEventsAo = JSON.parse(updated.points_ao_history);
+                } catch (e) {
+                  console.error(e);
+                }
+              } else {
+                const pointsList = updated.points_ao_history.split(',').map(Number).filter(Boolean);
+                parsedEventsAo = pointsList.map((pts: number) => ({
+                  fighter: 'AO',
+                  points: pts,
+                  technique: pts === 1 ? 'Yuko' : pts === 2 ? 'Waza-ari' : pts === 3 ? 'Ippon' : 'Point',
+                  timestamp: 0,
+                  matchId: boutId!
+                }));
+              }
+            }
+
+            setEventsAka(parsedEventsAka);
+            setEventsAo(parsedEventsAo);
             setPenaltiesAka(updated.penalties_a ? updated.penalties_a.split(',').filter(Boolean) : []);
             setPenaltiesAo(updated.penalties_b ? updated.penalties_b.split(',').filter(Boolean) : []);
             
@@ -455,7 +550,7 @@ function SpectatorDisplayContent() {
           </div>
 
           {/* Huge Score */}
-          <div className="flex justify-center my-6">
+          <div className="flex flex-col items-center justify-center my-6">
             <span className={`text-[12rem] lg:text-[15rem] font-black leading-none font-mono select-none tracking-tight transition-all duration-300 ${
               winnerSide === 'aka' && winMethod === 'Superior Points'
                 ? 'text-green-400 animate-pulse drop-shadow-[0_0_80px_rgba(34,197,94,0.7)]'
@@ -465,6 +560,18 @@ function SpectatorDisplayContent() {
             }`}>
               {scoreAka}
             </span>
+            {showPointHistory && eventsAka.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2 justify-center max-w-[90%]">
+                {eventsAka.map((ev, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2.5 py-0.5 rounded bg-red-950/80 border border-red-500/30 text-[10px] font-black text-red-400 uppercase tracking-wider"
+                  >
+                    +{ev.points} {ev.technique}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* AKA Warnings Row */}
@@ -562,7 +669,7 @@ function SpectatorDisplayContent() {
           </div>
 
           {/* Huge Score */}
-          <div className="flex justify-center my-6">
+          <div className="flex flex-col items-center justify-center my-6">
             <span className={`text-[12rem] lg:text-[15rem] font-black leading-none font-mono select-none tracking-tight transition-all duration-300 ${
               winnerSide === 'ao' && winMethod === 'Superior Points'
                 ? 'text-green-400 animate-pulse drop-shadow-[0_0_80px_rgba(34,197,94,0.7)]'
@@ -572,6 +679,18 @@ function SpectatorDisplayContent() {
             }`}>
               {scoreAo}
             </span>
+            {showPointHistory && eventsAo.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2 justify-center max-w-[90%]">
+                {eventsAo.map((ev, idx) => (
+                  <span
+                    key={idx}
+                    className="px-2.5 py-0.5 rounded bg-blue-950/80 border border-blue-500/30 text-[10px] font-black text-blue-400 uppercase tracking-wider"
+                  >
+                    +{ev.points} {ev.technique}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* AO Warnings Row */}

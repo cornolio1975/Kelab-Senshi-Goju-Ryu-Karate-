@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS categories (
     max_weight DECIMAL(5, 2) NOT NULL,
     capacity INT DEFAULT 32,
     status VARCHAR(20) DEFAULT 'Open' CHECK (status IN ('Open', 'Closed', 'Full')),
+    format VARCHAR(20) DEFAULT 'knockout' CHECK (format IN ('knockout', 'round_robin', 'wkf_repechage')),
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

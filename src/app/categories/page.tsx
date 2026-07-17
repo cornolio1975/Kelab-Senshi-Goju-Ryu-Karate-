@@ -56,7 +56,8 @@ export default function CategoriesPage() {
     min_weight: 0,
     max_weight: 100,
     capacity: 32,
-    status: 'Open' as any
+    status: 'Open' as any,
+    format: 'knockout' as any
   });
 
   useEffect(() => {
@@ -257,7 +258,8 @@ export default function CategoriesPage() {
         min_weight: 0,
         max_weight: 100,
         capacity: 32,
-        status: 'Open' as any
+        status: 'Open' as any,
+        format: 'knockout' as any
       });
       triggerRefresh();
     } catch (err: any) {
@@ -981,15 +983,29 @@ export default function CategoriesPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Capacity Limits</label>
-                <input
-                  type="number"
-                  required
-                  value={newCat.capacity}
-                  onChange={(e) => setNewCat({ ...newCat, capacity: parseInt(e.target.value) })}
-                  className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Capacity Limits</label>
+                  <input
+                    type="number"
+                    required
+                    value={newCat.capacity}
+                    onChange={(e) => setNewCat({ ...newCat, capacity: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase block mb-1">Tournament Format</label>
+                  <select
+                    value={newCat.format || 'knockout'}
+                    onChange={(e) => setNewCat({ ...newCat, format: e.target.value as any })}
+                    className="w-full px-3 py-2 bg-secondary border border-border rounded-lg text-xs focus:outline-none text-foreground"
+                  >
+                    <option value="knockout">Single Elimination</option>
+                    <option value="round_robin">Round Robin System</option>
+                    <option value="wkf_repechage">WKF Repechage System</option>
+                  </select>
+                </div>
               </div>
             </div>
 

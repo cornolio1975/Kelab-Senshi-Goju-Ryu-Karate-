@@ -31,18 +31,18 @@ const SEED_COACHES: Coach[] = [
 ];
 
 const SEED_CATEGORIES: Category[] = [
-  { id: 'cat-1', name: 'Male Kumite -60kg (18+)', gender: 'Male', min_age: 18, max_age: 99, min_weight: 0, max_weight: 60, capacity: 32, status: 'Open' },
-  { id: 'cat-2', name: 'Male Kumite -67kg (18+)', gender: 'Male', min_age: 18, max_age: 99, min_weight: 60.01, max_weight: 67, capacity: 32, status: 'Open' },
-  { id: 'cat-3', name: 'Male Kumite -75kg (18+)', gender: 'Male', min_age: 18, max_age: 99, min_weight: 67.01, max_weight: 75, capacity: 32, status: 'Open' },
-  { id: 'cat-4', name: 'Male Kumite +75kg (18+)', gender: 'Male', min_age: 18, max_age: 99, min_weight: 75.01, max_weight: 999, capacity: 32, status: 'Open' },
-  { id: 'cat-5', name: 'Female Kumite -50kg (18+)', gender: 'Female', min_age: 18, max_age: 99, min_weight: 0, max_weight: 50, capacity: 16, status: 'Open' },
-  { id: 'cat-6', name: 'Female Kumite -55kg (18+)', gender: 'Female', min_age: 18, max_age: 99, min_weight: 50.01, max_weight: 55, capacity: 16, status: 'Open' },
-  { id: 'cat-7', name: 'Female Kumite +55kg (18+)', gender: 'Female', min_age: 18, max_age: 99, min_weight: 55.01, max_weight: 999, capacity: 16, status: 'Open' },
-  { id: 'cat-8', name: 'Male Kata (18+)', gender: 'Male', min_age: 18, max_age: 99, min_weight: 0, max_weight: 999, capacity: 32, status: 'Open' },
-  { id: 'cat-9', name: 'Female Kata (18+)', gender: 'Female', min_age: 18, max_age: 99, min_weight: 0, max_weight: 999, capacity: 32, status: 'Open' },
-  { id: 'cat-10', name: 'Junior Male Kumite -55kg (16-17)', gender: 'Male', min_age: 16, max_age: 17, min_weight: 0, max_weight: 55, capacity: 16, status: 'Open' },
-  { id: 'cat-11', name: 'Junior Male Kumite -61kg (16-17)', gender: 'Male', min_age: 16, max_age: 17, min_weight: 55.01, max_weight: 61, capacity: 16, status: 'Open' },
-  { id: 'cat-12', name: 'Junior Female Kumite -48kg (16-17)', gender: 'Female', min_age: 16, max_age: 17, min_weight: 0, max_weight: 48, capacity: 16, status: 'Open' }
+  { id: 'cat-1', name: 'Male Kumite -60kg (18+)', gender: 'Male', min_age: 18, max_age: 99, min_weight: 0, max_weight: 60, capacity: 32, status: 'Open', format: 'knockout' },
+  { id: 'cat-2', name: 'Male Kumite -67kg (18+)', gender: 'Male', min_age: 18, max_age: 99, min_weight: 60.01, max_weight: 67, capacity: 32, status: 'Open', format: 'knockout' },
+  { id: 'cat-3', name: 'Male Kumite -75kg (18+)', gender: 'Male', min_age: 18, max_age: 99, min_weight: 67.01, max_weight: 75, capacity: 32, status: 'Open', format: 'knockout' },
+  { id: 'cat-4', name: 'Male Kumite +75kg (18+)', gender: 'Male', min_age: 18, max_age: 99, min_weight: 75.01, max_weight: 999, capacity: 32, status: 'Open', format: 'knockout' },
+  { id: 'cat-5', name: 'Female Kumite -50kg (18+)', gender: 'Female', min_age: 18, max_age: 99, min_weight: 0, max_weight: 50, capacity: 16, status: 'Open', format: 'knockout' },
+  { id: 'cat-6', name: 'Female Kumite -55kg (18+)', gender: 'Female', min_age: 18, max_age: 99, min_weight: 50.01, max_weight: 55, capacity: 16, status: 'Open', format: 'knockout' },
+  { id: 'cat-7', name: 'Female Kumite +55kg (18+)', gender: 'Female', min_age: 18, max_age: 99, min_weight: 55.01, max_weight: 999, capacity: 16, status: 'Open', format: 'knockout' },
+  { id: 'cat-8', name: 'Male Kata (18+)', gender: 'Male', min_age: 18, max_age: 99, min_weight: 0, max_weight: 999, capacity: 32, status: 'Open', format: 'knockout' },
+  { id: 'cat-9', name: 'Female Kata (18+)', gender: 'Female', min_age: 18, max_age: 99, min_weight: 0, max_weight: 999, capacity: 32, status: 'Open', format: 'knockout' },
+  { id: 'cat-10', name: 'Junior Male Kumite -55kg (16-17)', gender: 'Male', min_age: 16, max_age: 17, min_weight: 0, max_weight: 55, capacity: 16, status: 'Open', format: 'knockout' },
+  { id: 'cat-11', name: 'Junior Male Kumite -61kg (16-17)', gender: 'Male', min_age: 16, max_age: 17, min_weight: 55.01, max_weight: 61, capacity: 16, status: 'Open', format: 'knockout' },
+  { id: 'cat-12', name: 'Junior Female Kumite -48kg (16-17)', gender: 'Female', min_age: 16, max_age: 17, min_weight: 0, max_weight: 48, capacity: 16, status: 'Open', format: 'knockout' }
 ];
 
 const SEED_PARTICIPANTS: Participant[] = [
@@ -1049,7 +1049,7 @@ export const mockStore = {
       const list = getStoreData<Bout>('ts_bouts', []).filter(b => b.category_id !== catId);
       saveStoreData('ts_bouts', [...list, ...newBouts]);
     },
-    generateDraw: (catId: string, drawType: 'Elimination' | 'Round-robin', hasThirdPlace: boolean, passedAthletes?: Participant[]): Bout[] => {
+    generateDraw: (catId: string, drawType: string, hasThirdPlace: boolean, passedAthletes?: Participant[]): Bout[] => {
       console.log('[mockStore.generateDraw] catId:', catId, 'passedAthletes count:', passedAthletes?.length);
       let athletes = passedAthletes;
       if (!athletes) {
@@ -1070,7 +1070,7 @@ export const mockStore = {
       const generatedBouts: Bout[] = [];
       const allBouts = getStoreData<Bout>('ts_bouts', []);
 
-      if (drawType === 'Round-robin') {
+      if (drawType === 'Round-robin' || drawType === 'round_robin') {
         let boutIndex = 1;
         for (let i = 0; i < athletes.length; i++) {
           for (let j = i + 1; j < athletes.length; j++) {
@@ -1085,7 +1085,22 @@ export const mockStore = {
               score_a: 0,
               score_b: 0,
               status: 'Scheduled',
-              tatami: 'Tatami 1'
+              tatami: 'Tatami 1',
+              senshu_a: false,
+              senshu_b: false,
+              penalties_a: '',
+              penalties_b: '',
+              penalties_c1_a: '0',
+              penalties_c2_a: '0',
+              penalties_c3_a: '0',
+              penalties_c1_b: '0',
+              penalties_c2_b: '0',
+              penalties_c3_b: '0',
+              points_aka_history: '',
+              points_ao_history: '',
+              victory_method: '',
+              timer_seconds: 180,
+              timer_active: false
             };
             generatedBouts.push(newBout);
             boutIndex++;
@@ -1147,7 +1162,22 @@ export const mockStore = {
             score_a: 0,
             score_b: 0,
             status,
-            tatami: `Tatami ${Math.ceil(boutNo / 4) === 1 ? '1' : '2'}`
+            tatami: `Tatami ${Math.ceil(boutNo / 4) === 1 ? '1' : '2'}`,
+            senshu_a: false,
+            senshu_b: false,
+            penalties_a: '',
+            penalties_b: '',
+            penalties_c1_a: '0',
+            penalties_c2_a: '0',
+            penalties_c3_a: '0',
+            penalties_c1_b: '0',
+            penalties_c2_b: '0',
+            penalties_c3_b: '0',
+            points_aka_history: '',
+            points_ao_history: '',
+            victory_method: '',
+            timer_seconds: 180,
+            timer_active: false
           };
           generatedBouts.push(newBout);
           boutNo++;
@@ -1170,7 +1200,22 @@ export const mockStore = {
               score_a: 0,
               score_b: 0,
               status: 'Scheduled',
-              tatami: `Tatami 1`
+              tatami: `Tatami 1`,
+              senshu_a: false,
+              senshu_b: false,
+              penalties_a: '',
+              penalties_b: '',
+              penalties_c1_a: '0',
+              penalties_c2_a: '0',
+              penalties_c3_a: '0',
+              penalties_c1_b: '0',
+              penalties_c2_b: '0',
+              penalties_c3_b: '0',
+              points_aka_history: '',
+              points_ao_history: '',
+              victory_method: '',
+              timer_seconds: 180,
+              timer_active: false
             };
             generatedBouts.push(newBout);
           }
@@ -1178,7 +1223,7 @@ export const mockStore = {
           roundNo++;
         }
 
-        if (hasThirdPlace && count >= 4) {
+        if (drawType !== 'wkf_repechage' && hasThirdPlace && count >= 4) {
           const newBout: Bout = {
             id: `bout-${catId}-r3rd-1-${Date.now()}`,
             category_id: catId,
@@ -1190,7 +1235,22 @@ export const mockStore = {
             score_a: 0,
             score_b: 0,
             status: 'Scheduled',
-            tatami: 'Tatami 1'
+            tatami: 'Tatami 1',
+            senshu_a: false,
+            senshu_b: false,
+            penalties_a: '',
+            penalties_b: '',
+            penalties_c1_a: '0',
+            penalties_c2_a: '0',
+            penalties_c3_a: '0',
+            penalties_c1_b: '0',
+            penalties_c2_b: '0',
+            penalties_c3_b: '0',
+            points_aka_history: '',
+            points_ao_history: '',
+            victory_method: '',
+            timer_seconds: 180,
+            timer_active: false
           };
           generatedBouts.push(newBout);
         }
@@ -1238,6 +1298,26 @@ export const mockStore = {
       }
 
       saveStoreData('ts_bouts', list);
+
+      // Auto-generate WKF repechage if format is 'wkf_repechage' and finalists are set
+      try {
+        const category = mockStore.categories.list().find(c => c.id === bout.category_id);
+        if (category && category.format === 'wkf_repechage') {
+          const freshBouts = getStoreData<Bout>('ts_bouts', []);
+          const catBouts = freshBouts.filter(b => b.category_id === bout.category_id);
+          const maxRound = Math.max(...catBouts.filter(b => b.round_no !== 99 && b.round_no !== 98).map(b => b.round_no), 1);
+          const finalBout = catBouts.find(b => b.round_no === maxRound && b.bout_no === 1);
+          if (finalBout && finalBout.participant_a_id && finalBout.participant_b_id) {
+            const hasRepechage = catBouts.some(b => b.round_no === 98);
+            if (!hasRepechage) {
+              mockStore.bouts.generateRepechage(bout.category_id);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Auto-repechage generation failed:', e);
+      }
+
       return updatedBout;
     },
     updateBoutState: (id: string, updates: Partial<Bout>): Bout => {
@@ -1276,6 +1356,26 @@ export const mockStore = {
       }
 
       saveStoreData('ts_bouts', list);
+
+      // Auto-generate WKF repechage if format is 'wkf_repechage' and finalists are set
+      try {
+        const category = mockStore.categories.list().find(c => c.id === updated.category_id);
+        if (category && category.format === 'wkf_repechage') {
+          const freshBouts = getStoreData<Bout>('ts_bouts', []);
+          const catBouts = freshBouts.filter(b => b.category_id === updated.category_id);
+          const maxRound = Math.max(...catBouts.filter(b => b.round_no !== 99 && b.round_no !== 98).map(b => b.round_no), 1);
+          const finalBout = catBouts.find(b => b.round_no === maxRound && b.bout_no === 1);
+          if (finalBout && finalBout.participant_a_id && finalBout.participant_b_id) {
+            const hasRepechage = catBouts.some(b => b.round_no === 98);
+            if (!hasRepechage) {
+              mockStore.bouts.generateRepechage(updated.category_id);
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Auto-repechage generation failed:', e);
+      }
+
       return updated;
     },
     resetBoutResult: (boutId: string, matchDuration: number): Bout => {
@@ -1386,7 +1486,22 @@ export const mockStore = {
           score_a: 0,
           score_b: 0,
           status: 'Scheduled',
-          tatami: 'Tatami 1'
+          tatami: 'Tatami 1',
+          senshu_a: false,
+          senshu_b: false,
+          penalties_a: '',
+          penalties_b: '',
+          penalties_c1_a: '0',
+          penalties_c2_a: '0',
+          penalties_c3_a: '0',
+          penalties_c1_b: '0',
+          penalties_c2_b: '0',
+          penalties_c3_b: '0',
+          points_aka_history: '',
+          points_ao_history: '',
+          victory_method: '',
+          timer_seconds: 180,
+          timer_active: false
         };
         newBouts.push(b1);
         
@@ -1404,7 +1519,22 @@ export const mockStore = {
             score_a: 0,
             score_b: 0,
             status: 'Scheduled',
-            tatami: 'Tatami 1'
+            tatami: 'Tatami 1',
+            senshu_a: false,
+            senshu_b: false,
+            penalties_a: '',
+            penalties_b: '',
+            penalties_c1_a: '0',
+            penalties_c2_a: '0',
+            penalties_c3_a: '0',
+            penalties_c1_b: '0',
+            penalties_c2_b: '0',
+            penalties_c3_b: '0',
+            points_aka_history: '',
+            points_ao_history: '',
+            victory_method: '',
+            timer_seconds: 180,
+            timer_active: false
           };
           newBouts.push(bNext);
         }

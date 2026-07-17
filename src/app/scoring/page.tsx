@@ -36,6 +36,9 @@ export default function ScoringPage() {
   // Advanced scoring history and decision state
   const [historyAo, setHistoryAo] = useState<number[]>([]);
   const [historyAka, setHistoryAka] = useState<number[]>([]);
+  const [eventsAo, setEventsAo] = useState<{ fighter: string; points: number; technique: string; timestamp: number; matchId: string }[]>([]);
+  const [eventsAka, setEventsAka] = useState<{ fighter: string; points: number; technique: string; timestamp: number; matchId: string }[]>([]);
+  const [showPointHistory, setShowPointHistory] = useState(false);
   const [superiorWinner, setSuperiorWinner] = useState<'ao' | 'aka' | null>(null);
   const [blinkWinner, setBlinkWinner] = useState<'ao' | 'aka' | null>(null);
   const [showSuperiorPopup, setShowSuperiorPopup] = useState(false);
@@ -73,7 +76,12 @@ export default function ScoringPage() {
   const [winMethod, setWinMethod] = useState<string>('');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    if (typeof window !== 'undefined') {
+      setShowPointHistory(localStorage.getItem('ts_show_point_history_referee') === 'true');
+    }
+  }, []);
 
   /* Load data */
   useEffect(() => {
@@ -118,10 +126,55 @@ export default function ScoringPage() {
       setSenshuAo(sAo);
       setSenshuAka(sAka);
       
-      const savedPointsAo = currentBout.points_ao_history ? currentBout.points_ao_history.split(',').map(Number).filter(Boolean) : [];
-      const savedPointsAka = currentBout.points_aka_history ? currentBout.points_aka_history.split(',').map(Number).filter(Boolean) : [];
+      let parsedEventsAo: { fighter: string; points: number; technique: string; timestamp: number; matchId: string }[] = [];
+      let parsedEventsAka: { fighter: string; points: number; technique: string; timestamp: number; matchId: string }[] = [];
+      let savedPointsAo: number[] = [];
+      let savedPointsAka: number[] = [];
+
+      if (currentBout.points_ao_history) {
+        if (currentBout.points_ao_history.startsWith('[')) {
+          try {
+            parsedEventsAo = JSON.parse(currentBout.points_ao_history);
+            savedPointsAo = parsedEventsAo.map(e => e.points);
+          } catch (e) {
+            console.error(e);
+          }
+        } else {
+          savedPointsAo = currentBout.points_ao_history.split(',').map(Number).filter(Boolean);
+          parsedEventsAo = savedPointsAo.map(pts => ({
+            fighter: 'AO',
+            points: pts,
+            technique: pts === 1 ? 'Yuko' : pts === 2 ? 'Waza-ari' : pts === 3 ? 'Ippon' : 'Point',
+            timestamp: 0,
+            matchId: currentBout.id
+          }));
+        }
+      }
+
+      if (currentBout.points_aka_history) {
+        if (currentBout.points_aka_history.startsWith('[')) {
+          try {
+            parsedEventsAka = JSON.parse(currentBout.points_aka_history);
+            savedPointsAka = parsedEventsAka.map(e => e.points);
+          } catch (e) {
+            console.error(e);
+          }
+        } else {
+          savedPointsAka = currentBout.points_aka_history.split(',').map(Number).filter(Boolean);
+          parsedEventsAka = savedPointsAka.map(pts => ({
+            fighter: 'AKA',
+            points: pts,
+            technique: pts === 1 ? 'Yuko' : pts === 2 ? 'Waza-ari' : pts === 3 ? 'Ippon' : 'Point',
+            timestamp: 0,
+            matchId: currentBout.id
+          }));
+        }
+      }
+
       setHistoryAo(savedPointsAo);
       setHistoryAka(savedPointsAka);
+      setEventsAo(parsedEventsAo);
+      setEventsAka(parsedEventsAka);
 
       if (sAo) {
         setFirstScorer('ao');
@@ -246,16 +299,27 @@ export default function ScoringPage() {
     if (winner) return;
     let finalAo = scoreAo;
     let finalAka = scoreAka;
+    const technique = pts === 1 ? 'Yuko' : pts === 2 ? 'Waza-ari' : pts === 3 ? 'Ippon' : 'Point';
+    const timestamp = timeLeft;
+    const newEvent = {
+      fighter: side.toUpperCase(),
+      points: pts,
+      technique,
+      timestamp,
+      matchId: selectedBoutId
+    };
 
     if (side === 'ao') {
       const newScore = Math.max(0, scoreAo + pts);
       setScoreAo(newScore);
       setHistoryAo(prev => [...prev, pts]);
+      setEventsAo(prev => [...prev, newEvent]);
       finalAo = newScore;
     } else {
       const newScore = Math.max(0, scoreAka + pts);
       setScoreAka(newScore);
       setHistoryAka(prev => [...prev, pts]);
+      setEventsAka(prev => [...prev, newEvent]);
       finalAka = newScore;
     }
 
@@ -305,6 +369,23 @@ export default function ScoringPage() {
         }
         return next;
       });
+      setEventsAo(prev => {
+        const next = [...prev];
+        let p = pts;
+        while (p > 0 && next.length > 0) {
+          const last = { ...next[next.length - 1] };
+          if (last.points <= p) {
+            p -= last.points;
+            next.pop();
+          } else {
+            last.points -= p;
+            last.technique = last.points === 1 ? 'Yuko' : last.points === 2 ? 'Waza-ari' : last.points === 3 ? 'Ippon' : 'Point';
+            next[next.length - 1] = last;
+            p = 0;
+          }
+        }
+        return next;
+      });
     } else {
       finalAka = Math.max(0, scoreAka - pts);
       setScoreAka(finalAka);
@@ -318,6 +399,23 @@ export default function ScoringPage() {
             next.pop();
           } else {
             next[next.length - 1] = last - p;
+            p = 0;
+          }
+        }
+        return next;
+      });
+      setEventsAka(prev => {
+        const next = [...prev];
+        let p = pts;
+        while (p > 0 && next.length > 0) {
+          const last = { ...next[next.length - 1] };
+          if (last.points <= p) {
+            p -= last.points;
+            next.pop();
+          } else {
+            last.points -= p;
+            last.technique = last.points === 1 ? 'Yuko' : last.points === 2 ? 'Waza-ari' : last.points === 3 ? 'Ippon' : 'Point';
+            next[next.length - 1] = last;
             p = 0;
           }
         }
@@ -389,8 +487,8 @@ export default function ScoringPage() {
         penalties_c3_a: '0',
         penalties_c3_b: '0',
         victory_method: winMethod,
-        points_ao_history: historyAo.join(','),
-        points_aka_history: historyAka.join(',')
+        points_ao_history: JSON.stringify(eventsAo),
+        points_aka_history: JSON.stringify(eventsAka)
       });
       // Refresh bouts
       const updated = await db.bouts.list();
@@ -648,12 +746,26 @@ export default function ScoringPage() {
 
             {/* AKA Score */}
             <div className="flex flex-col items-end gap-3">
-              <span
-                className="font-black tabular-nums leading-none"
-                style={{ fontSize: 'clamp(5rem, 14vw, 11rem)', color: '#ff1a1a', textShadow: '0 0 60px rgba(255,0,0,0.5)' }}
-              >
-                {scoreAka}
-              </span>
+              <div className="flex flex-col items-end">
+                <span
+                  className="font-black tabular-nums leading-none"
+                  style={{ fontSize: 'clamp(5rem, 14vw, 11rem)', color: '#ff1a1a', textShadow: '0 0 60px rgba(255,0,0,0.5)' }}
+                >
+                  {scoreAka}
+                </span>
+                {showPointHistory && eventsAka.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1 justify-end max-w-[300px]">
+                    {eventsAka.map((ev, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-0.5 rounded-sm bg-red-950/80 border border-red-500/30 text-[9px] font-black text-red-400 whitespace-nowrap"
+                      >
+                        +{ev.points} {ev.technique}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
               {/* Scoring buttons */}
               <div className="flex gap-1.5">
                 {[
@@ -727,12 +839,26 @@ export default function ScoringPage() {
 
             {/* AO Score */}
             <div className="flex flex-col items-end gap-3">
-              <span
-                className="font-black tabular-nums leading-none"
-                style={{ fontSize: 'clamp(5rem, 14vw, 11rem)', color: '#00d4ff', textShadow: '0 0 60px rgba(0,200,255,0.5)' }}
-              >
-                {scoreAo}
-              </span>
+              <div className="flex flex-col items-end">
+                <span
+                  className="font-black tabular-nums leading-none"
+                  style={{ fontSize: 'clamp(5rem, 14vw, 11rem)', color: '#00d4ff', textShadow: '0 0 60px rgba(0,200,255,0.5)' }}
+                >
+                  {scoreAo}
+                </span>
+                {showPointHistory && eventsAo.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1 justify-end max-w-[300px]">
+                    {eventsAo.map((ev, idx) => (
+                      <span
+                        key={idx}
+                        className="px-2 py-0.5 rounded-sm bg-blue-950/80 border border-blue-500/30 text-[9px] font-black text-blue-400 whitespace-nowrap"
+                      >
+                        +{ev.points} {ev.technique}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
               {/* Scoring buttons */}
               <div className="flex gap-1.5">
                 {[

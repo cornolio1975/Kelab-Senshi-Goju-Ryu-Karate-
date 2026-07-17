@@ -43,6 +43,9 @@ export default function ScoreboardControlPage() {
   // Technique log arrays (storing raw point values e.g. 3, 2, 1 for tie breaks)
   const [pointsAka, setPointsAka] = useState<number[]>([]);
   const [pointsAo, setPointsAo] = useState<number[]>([]);
+  const [eventsAka, setEventsAka] = useState<{ fighter: string; points: number; technique: string; timestamp: number; matchId: string }[]>([]);
+  const [eventsAo, setEventsAo] = useState<{ fighter: string; points: number; technique: string; timestamp: number; matchId: string }[]>([]);
+  const [showPointHistory, setShowPointHistory] = useState(false);
 
   // Timer state
   const [timeLeft, setTimeLeft] = useState<number>(1800);
@@ -70,6 +73,7 @@ export default function ScoreboardControlPage() {
     setMounted(true);
     if (typeof window !== 'undefined') {
       broadcastChannelRef.current = new BroadcastChannel('wkf-scoreboard-sync');
+      setShowPointHistory(localStorage.getItem('ts_show_point_history_referee') === 'true');
     }
     return () => {
       broadcastChannelRef.current?.close();
@@ -109,8 +113,50 @@ export default function ScoreboardControlPage() {
         setSenshuAka(currentBout.senshu_a ?? false);
         setSenshuAo(currentBout.senshu_b ?? false);
 
-        const savedPointsAka = currentBout.points_aka_history ? currentBout.points_aka_history.split(',').map(Number).filter(Boolean) : [];
-        const savedPointsAo = currentBout.points_ao_history ? currentBout.points_ao_history.split(',').map(Number).filter(Boolean) : [];
+        let parsedEventsAka: { fighter: string; points: number; technique: string; timestamp: number; matchId: string }[] = [];
+        let parsedEventsAo: { fighter: string; points: number; technique: string; timestamp: number; matchId: string }[] = [];
+        let savedPointsAka: number[] = [];
+        let savedPointsAo: number[] = [];
+
+        if (currentBout.points_aka_history) {
+          if (currentBout.points_aka_history.startsWith('[')) {
+            try {
+              parsedEventsAka = JSON.parse(currentBout.points_aka_history);
+              savedPointsAka = parsedEventsAka.map(e => e.points);
+            } catch (e) {
+              console.error(e);
+            }
+          } else {
+            savedPointsAka = currentBout.points_aka_history.split(',').map(Number).filter(Boolean);
+            parsedEventsAka = savedPointsAka.map(pts => ({
+              fighter: 'AKA',
+              points: pts,
+              technique: pts === 1 ? 'Yuko' : pts === 2 ? 'Waza-ari' : pts === 3 ? 'Ippon' : 'Point',
+              timestamp: 0,
+              matchId: currentBout.id
+            }));
+          }
+        }
+
+        if (currentBout.points_ao_history) {
+          if (currentBout.points_ao_history.startsWith('[')) {
+            try {
+              parsedEventsAo = JSON.parse(currentBout.points_ao_history);
+              savedPointsAo = parsedEventsAo.map(e => e.points);
+            } catch (e) {
+              console.error(e);
+            }
+          } else {
+            savedPointsAo = currentBout.points_ao_history.split(',').map(Number).filter(Boolean);
+            parsedEventsAo = savedPointsAo.map(pts => ({
+              fighter: 'AO',
+              points: pts,
+              technique: pts === 1 ? 'Yuko' : pts === 2 ? 'Waza-ari' : pts === 3 ? 'Ippon' : 'Point',
+              timestamp: 0,
+              matchId: currentBout.id
+            }));
+          }
+        }
 
         // Determine first scorer from saved history or Senshu columns directly
         if (currentBout.senshu_a) {
@@ -130,6 +176,8 @@ export default function ScoreboardControlPage() {
 
         setPointsAka(savedPointsAka);
         setPointsAo(savedPointsAo);
+        setEventsAka(parsedEventsAka);
+        setEventsAo(parsedEventsAo);
 
         setTimeLeft((currentBout.timer_seconds ?? 180) * 10);
         setMatchDuration(currentBout.timer_seconds ?? 180);
@@ -185,6 +233,8 @@ export default function ScoreboardControlPage() {
       c3Ao: 0,
       pointsAka,
       pointsAo,
+      eventsAka,
+      eventsAo,
       timeLeft,
       timerActive,
       goldenScore,
@@ -196,7 +246,7 @@ export default function ScoreboardControlPage() {
     boutId, competitorAka, competitorAo, scoreAka, scoreAo,
     senshuAka, senshuAo, firstScorer,
     c1Aka, c1Ao,
-    pointsAka, pointsAo,
+    pointsAka, pointsAo, eventsAka, eventsAo,
     timeLeft, timerActive, goldenScore, winnerSide, winMethod, matchDuration
   ]);
 
@@ -218,8 +268,8 @@ export default function ScoreboardControlPage() {
             penalties_c1_b: String(c1Ao),
             penalties_c2_b: '0',
             penalties_c3_b: '0',
-            points_aka_history: pointsAka.join(','),
-            points_ao_history: pointsAo.join(','),
+            points_aka_history: JSON.stringify(eventsAka),
+            points_ao_history: JSON.stringify(eventsAo),
             timer_seconds: Math.round(timeLeft / 10),
             timer_active: timerActive
           });
@@ -234,7 +284,7 @@ export default function ScoreboardControlPage() {
   }, [
     scoreAka, scoreAo, senshuAka, senshuAo,
     c1Aka, c1Ao,
-    pointsAka, pointsAo,
+    pointsAka, pointsAo, eventsAka, eventsAo,
     timeLeft, timerActive, goldenScore, winnerSide, winMethod, mounted, bout, broadcastState, boutId
   ]);
 
@@ -443,7 +493,9 @@ export default function ScoreboardControlPage() {
     prevC1Ao = c1Ao,
     prevPointsAka = pointsAka,
     prevPointsAo = pointsAo,
-    prevStoppageScorers = stoppageScorers
+    prevStoppageScorers = stoppageScorers,
+    prevEventsAka = eventsAka,
+    prevEventsAo = eventsAo
   ) => {
     setHistory((prev) => [
       ...prev,
@@ -458,7 +510,9 @@ export default function ScoreboardControlPage() {
         c1Ao: prevC1Ao,
         pointsAka: prevPointsAka,
         pointsAo: prevPointsAo,
-        stoppageScorers: prevStoppageScorers
+        stoppageScorers: prevStoppageScorers,
+        eventsAka: prevEventsAka,
+        eventsAo: prevEventsAo
       }
     ]);
   };
@@ -477,6 +531,8 @@ export default function ScoreboardControlPage() {
     setC1Ao(lastState.c1Ao ?? 0);
     setPointsAka(lastState.pointsAka ?? []);
     setPointsAo(lastState.pointsAo ?? []);
+    setEventsAka(lastState.eventsAka ?? []);
+    setEventsAo(lastState.eventsAo ?? []);
     setStoppageScorers(lastState.stoppageScorers ?? []);
     setHistory((prev) => prev.slice(0, -1));
   }, [history]);
@@ -501,6 +557,16 @@ export default function ScoreboardControlPage() {
     let isFirstScoreAka = false;
     let isFirstScoreAo = false;
 
+    const technique = points === 1 ? 'Yuko' : points === 2 ? 'Waza-ari' : points === 3 ? 'Ippon' : 'Point';
+    const timestamp = Math.round(timeLeft / 10);
+    const newEvent = {
+      fighter: side.toUpperCase(),
+      points,
+      technique,
+      timestamp,
+      matchId: boutId!
+    };
+
     if (side === 'aka') {
       const newScore = Math.max(0, scoreAka + points);
       setScoreAka(newScore);
@@ -509,12 +575,30 @@ export default function ScoreboardControlPage() {
       if (points > 0) {
         finalPointsAka.push(points);
         setPointsAka(finalPointsAka);
+        setEventsAka(prev => [...prev, newEvent]);
         if (scoreAka === 0) {
           isFirstScoreAka = true;
         }
       } else if (points < 0 && finalPointsAka.length > 0) {
         finalPointsAka.pop();
         setPointsAka(finalPointsAka);
+        setEventsAka(prev => {
+          const next = [...prev];
+          let p = Math.abs(points);
+          while (p > 0 && next.length > 0) {
+            const last = { ...next[next.length - 1] };
+            if (last.points <= p) {
+              p -= last.points;
+              next.pop();
+            } else {
+              last.points -= p;
+              last.technique = last.points === 1 ? 'Yuko' : last.points === 2 ? 'Waza-ari' : last.points === 3 ? 'Ippon' : 'Point';
+              next[next.length - 1] = last;
+              p = 0;
+            }
+          }
+          return next;
+        });
       }
     } else {
       const newScore = Math.max(0, scoreAo + points);
@@ -524,12 +608,30 @@ export default function ScoreboardControlPage() {
       if (points > 0) {
         finalPointsAo.push(points);
         setPointsAo(finalPointsAo);
+        setEventsAo(prev => [...prev, newEvent]);
         if (scoreAo === 0) {
           isFirstScoreAo = true;
         }
       } else if (points < 0 && finalPointsAo.length > 0) {
         finalPointsAo.pop();
         setPointsAo(finalPointsAo);
+        setEventsAo(prev => {
+          const next = [...prev];
+          let p = Math.abs(points);
+          while (p > 0 && next.length > 0) {
+            const last = { ...next[next.length - 1] };
+            if (last.points <= p) {
+              p -= last.points;
+              next.pop();
+            } else {
+              last.points -= p;
+              last.technique = last.points === 1 ? 'Yuko' : last.points === 2 ? 'Waza-ari' : last.points === 3 ? 'Ippon' : 'Point';
+              next[next.length - 1] = last;
+              p = 0;
+            }
+          }
+          return next;
+        });
       }
     }
 
@@ -582,7 +684,7 @@ export default function ScoreboardControlPage() {
         victory_method: 'Points' 
       } : null);
     }
-  }, [scoreAka, scoreAo, senshuAka, senshuAo, firstScorer, hasTimerRun, triggerBuzzer, pointsAka, pointsAo, c1Aka, c1Ao, bout, timerActive]);
+  }, [scoreAka, scoreAo, senshuAka, senshuAo, firstScorer, hasTimerRun, triggerBuzzer, pointsAka, pointsAo, eventsAka, eventsAo, c1Aka, c1Ao, bout, timerActive]);
 
   // Manage Penalties WKF System: C1, C2, C3, HC, H (level 1 to 5)
   const handleTogglePenalty = (side: 'aka' | 'ao', level: number) => {
@@ -787,8 +889,8 @@ export default function ScoreboardControlPage() {
         penalties_c1_b: String(c1Ao),
         penalties_c2_b: '0',
         penalties_c3_b: '0',
-        points_aka_history: pointsAka.join(','),
-        points_ao_history: pointsAo.join(','),
+        points_aka_history: JSON.stringify(eventsAka),
+        points_ao_history: JSON.stringify(eventsAo),
         timer_seconds: Math.round(timeLeft / 10),
         victory_method: winMethod
       });
@@ -835,6 +937,8 @@ export default function ScoreboardControlPage() {
       setFirstScorer(null);
       setPointsAka([]);
       setPointsAo([]);
+      setEventsAka([]);
+      setEventsAo([]);
       setWinnerSide(null);
       setWinMethod('');
       setTimeLeft(matchDuration * 10);
