@@ -358,7 +358,7 @@ export default function ReportsPage() {
           <div>
             <span className="text-[10px] text-muted-foreground block font-bold uppercase tracking-wider">Matches Completed</span>
             <span className="text-xl font-extrabold block text-foreground">
-              {bouts.filter(b => b.status === 'Completed').length} / {bouts.length}
+              {bouts.filter(b => b.status === 'Completed' || b.status === 'Walkover').length} / {bouts.length}
             </span>
           </div>
         </div>

@@ -77,7 +77,7 @@ export default function LandingPage() {
         if (featured.date) setEventDate(featured.date);
       }
       const activeAthletes = pList.filter(p => !p.deleted_at);
-      const completedBouts = bList.filter(b => b.status === 'Completed');
+      const completedBouts = bList.filter(b => b.status === 'Completed' || b.status === 'Walkover');
       const scheduledBouts = bList.filter(b => b.status === 'Scheduled');
       const runningBouts = bList.filter(b => b.status === 'Running');
 

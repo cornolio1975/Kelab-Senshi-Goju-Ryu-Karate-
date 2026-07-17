@@ -166,11 +166,11 @@ export default function CategoriesPage() {
     if (catBouts.length === 0) {
       return 'non-active';
     }
-    const allCompleted = catBouts.every(b => b.status === 'Completed');
+    const allCompleted = catBouts.every(b => b.status === 'Completed' || b.status === 'Walkover');
     if (allCompleted) {
       return 'completed';
     }
-    const hasStarted = catBouts.some(b => b.status === 'Completed' || b.status === 'Running');
+    const hasStarted = catBouts.some(b => b.status === 'Completed' || b.status === 'Walkover' || b.status === 'Running');
     if (hasStarted) {
       return 'active';
     }

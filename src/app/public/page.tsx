@@ -440,7 +440,7 @@ export default function PublicSpectatorHub() {
               <h3 className="text-xs font-extrabold uppercase tracking-wider text-gray-400">Recently Completed Matches</h3>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {bouts.filter(b => b.status === 'Completed').slice(-4).map((b) => {
+                {bouts.filter(b => b.status === 'Completed' || b.status === 'Walkover').slice(-4).map((b) => {
                   const competitorA = participants.find(p => p.id === b.participant_a_id);
                   const competitorB = participants.find(p => p.id === b.participant_b_id);
                   const winner = participants.find(p => p.id === b.winner_id);
@@ -467,7 +467,7 @@ export default function PublicSpectatorHub() {
                     </div>
                   );
                 })}
-                {bouts.filter(b => b.status === 'Completed').length === 0 && (
+                {bouts.filter(b => b.status === 'Completed' || b.status === 'Walkover').length === 0 && (
                   <div className="col-span-full bg-[#0d1322] border border-gray-800 rounded-xl p-8 text-center text-xs text-gray-500 italic">
                     No matches completed yet in this session.
                   </div>

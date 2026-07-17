@@ -1,6 +1,6 @@
 # Walkthrough: Tournament Brackets, Scoreboard Point History, Category Editing & Auto-Walkovers
 
-We have successfully implemented the Round Robin System, WKF Repechage System, the Technique Point History Display optional feature, the ability to edit and modify categories directly within Category Management, automatic walkover/bye propagation for single elimination brackets, the exclusion of walkover bouts from all scoring control lists, and fixed the 404 routing error on saving bouts and navigating Match Console Hub. All features are fully verified, unit-tested, built, and ready for deployment.
+We have successfully implemented the Round Robin System, WKF Repechage System, the Technique Point History Display optional feature, the ability to edit and modify categories directly within Category Management, automatic walkover/bye propagation for single elimination brackets, the exclusion of walkover bouts from all scoring control lists, fixed the 404 routing error on saving bouts, and resolved the category completion state calculation bug. All features are fully verified, unit-tested, built, and ready for deployment.
 
 ## 1. Summary of Changes
 
@@ -62,6 +62,17 @@ We have successfully implemented the Round Robin System, WKF Repechage System, t
   * Removed manual `basePath` prepending from `router.push()` routes. Next.js App Router client-side navigation handles base path prepends automatically, and manual prefixing caused 404 pages in production.
 * **[categories/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/categories/page.tsx)**:
   * Removed manual `basePath` prefixing on Console Hub match selection redirect.
+
+### F. WKF Category Completion State Fixes
+
+* **[categories/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/categories/page.tsx)**:
+  * Updated `getCategoryBracketStatus` to treat `Walkover` bouts as resolved. This ensures that categories with bye/walkover matches are correctly marked as "completed" in Category Management when all actual bouts finish.
+* **[draws/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/draws/page.tsx)**:
+  * Updated `getCategoryBracketStatus` to recognize `Walkover` status for category completion.
+* **[SportdataBracket.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/components/SportdataBracket.tsx)**:
+  * Updated the match list completion indicator, final standings calculation, and champion player display check to treat `Walkover` bouts as completed/resolved.
+* **[page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/page.tsx)**, **[reports/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/reports/page.tsx)**, **[public/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/public/page.tsx)**:
+  * Included `Walkover` bouts in recently completed and statistics calculations.
 
 ---
 

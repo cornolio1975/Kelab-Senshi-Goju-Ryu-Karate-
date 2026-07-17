@@ -177,7 +177,7 @@ export const SportdataBracket: React.FC<SportdataBracketProps> = ({
               {categoryBouts.sort((a, b) => a.bout_no - b.bout_no).map((b) => {
                 const compA = participants.find(p => p.id === b.participant_a_id);
                 const compB = participants.find(p => p.id === b.participant_b_id);
-                const isCompleted = b.status === 'Completed';
+                const isCompleted = b.status === 'Completed' || b.status === 'Walkover';
                 const isRunning = b.status === 'Running';
 
                 return (
@@ -288,7 +288,7 @@ export const SportdataBracket: React.FC<SportdataBracketProps> = ({
   // 5. Standings calculation
   const getStandings = () => {
     const finalBout = mainBouts.find((b) => b.round_no === R && b.bout_no === 1);
-    if (!finalBout || finalBout.status !== 'Completed' || !finalBout.winner_id) return [];
+    if (!finalBout || (finalBout.status !== 'Completed' && finalBout.status !== 'Walkover') || !finalBout.winner_id) return [];
 
     const first = participants.find((p) => p.id === finalBout.winner_id);
     const secondId =
@@ -302,7 +302,7 @@ export const SportdataBracket: React.FC<SportdataBracketProps> = ({
       { rank: '2', p: second },
     ];
 
-    if (bronzeBout && bronzeBout.status === 'Completed' && bronzeBout.winner_id) {
+    if (bronzeBout && (bronzeBout.status === 'Completed' || bronzeBout.status === 'Walkover') && bronzeBout.winner_id) {
       const third = participants.find((p) => p.id === bronzeBout.winner_id);
       const fourthId =
         bronzeBout.winner_id === bronzeBout.participant_a_id
@@ -316,7 +316,7 @@ export const SportdataBracket: React.FC<SportdataBracketProps> = ({
       if (semiRound > 0) {
         const semiBouts = mainBouts.filter((b) => b.round_no === semiRound);
         semiBouts.forEach((sb) => {
-          if (sb.status === 'Completed' && sb.winner_id) {
+          if ((sb.status === 'Completed' || sb.status === 'Walkover') && sb.winner_id) {
             const loserId =
               sb.winner_id === sb.participant_a_id ? sb.participant_b_id : sb.participant_a_id;
             if (loserId) {
@@ -397,7 +397,7 @@ export const SportdataBracket: React.FC<SportdataBracketProps> = ({
   };
 
   const finalBout = mainBouts.find((b) => b.round_no === R && b.bout_no === 1);
-  const championPlayer = finalBout && finalBout.status === 'Completed' && finalBout.winner_id
+  const championPlayer = finalBout && (finalBout.status === 'Completed' || finalBout.status === 'Walkover') && finalBout.winner_id
     ? participants.find((p) => p.id === finalBout.winner_id)
     : null;
 
