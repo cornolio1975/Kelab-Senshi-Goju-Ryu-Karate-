@@ -1,94 +1,33 @@
-# Walkthrough: Tournament Brackets, Scoreboard Point History, Category Editing & Auto-Walkovers
+# Walkthrough: Settings Unlocking, Hostinger 404 Routing Fix & Deployment Guide
 
-We have successfully implemented the Round Robin System, WKF Repechage System, the Technique Point History Display optional feature, the ability to edit and modify categories directly within Category Management, automatic walkover/bye propagation for single elimination brackets, the exclusion of walkover bouts from all scoring control lists, fixed the 404 routing error on saving bouts, resolved the category completion state calculation bug, and enhanced Point History visibility across all screens. All features are fully verified, unit-tested, built, and ready for deployment.
+We have successfully unlocked the local Scoreboard Settings point history checkboxes and Save button for non-admin operators, resolved the 404 routing error on Hostinger, and successfully generated deployment builds.
 
 ## 1. Summary of Changes
 
-### A. Tournament Brackets (Round Robin & Repechage)
+### A. Local Scoreboard Settings Unlocking
+* **[settings/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/settings/page.tsx)**:
+  - Removed `disabled={!canModify}` from the three point history checkboxes so any operator can toggle them locally.
+  - Enabled the global Save button for all users (`disabled={saving}` instead of `disabled={saving || !canModify}`).
+  - Guarded Supabase database writes in `handleSave` with `if (supabase && canModify)` so non-admins do not encounter Database RLS/Permission errors.
 
-* **[types.ts](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/db/types.ts)**: Added optional `format` field (`'knockout' | 'round_robin' | 'wkf_repechage'`) to the Category model.
-* **[supabase_schema.sql](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/supabase_schema.sql)**: Updated SQL definition of categories table with format constraints.
-* **[dbClient.ts](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/db/dbClient.ts)**: Updated `generateDraw` signature to support dynamic bracket formats.
-* **[roundRobinRankings.ts](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/utils/roundRobinRankings.ts)**: New utility implementing WKF Round Robin tie-breaking rules: Wins -> Point Diff -> Total Points Scored -> Head-to-head results.
-* **[mockStore.ts](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/db/mockStore.ts)**: Added auto-repechage generation, round-robin combinations, and proper seeding.
-* **[categories/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/categories/page.tsx)**: Added "Tournament Format" dropdown selector to the Add Category modal.
-* **[draws/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/draws/page.tsx)**: Added active format badges and auto-lock state checks.
-* **[SportdataBracket.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/components/SportdataBracket.tsx)**: Added standings rendering and SVG pan/zoom controls.
-
-### B. Technique Point History Display & Visibility Fixes
-
-* **[settings/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/settings/page.tsx)**: Added "Scoreboard Settings" section with tick boxes for Referee, Public, and Streaming layouts (`ts_show_point_history_referee`, `ts_show_point_history_public`, `ts_show_point_history_stream`) saved to local storage.
-* **[scoring/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/scoring/page.tsx)**:
-  * Tracks technique type (e.g. +1 Yuko, +2 Waza-ari, +3 Ippon) and score timestamps.
-  * Handles JSON history parsing on load with legacy comma-separated string fallback.
-  * Adjusts history correctly on Undo actions.
-  * Renders small, clean WKF-style technique badges below the main scores.
-  * Added url parameter override `?history=true` to force history rendering.
-* **[control/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/dashboard/control/page.tsx)**:
-  * Tracks points history arrays and syncs them over the BroadcastChannel (`wkf-scoreboard-sync`).
-  * Serializes events as JSON strings on match finish and clears history on rematch resets.
-  * Pushes history to the undo stack.
-  * Rendered technique badges below AKA/AO score counters on the controller page.
-  * Added url parameter override `?history=true` and broadcast `showPointHistory` payload syncing.
-* **[display/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%252520Karate/src/app/display/page.tsx)**:
-  * Receives broadcast event payloads and reads settings dynamically.
-  * Renders badges underneath the total score.
-  * Supports real-time fallback updates via Supabase.
-  * Listens for `showPointHistory` from broadcast channel events and supports `?history=true` override.
-
-### C. Category Editing Capability
-
-* **[categories/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/categories/page.tsx)**:
-  * Added `Edit2` icon next to the Delete Category button for categories.
-  * Added `isEditOpen` and `editCat` state to manage the selected category and dialog display.
-  * Implemented `handleEditSubmit` form handler connecting to `db.categories.update`.
-  * Added the fully-featured Edit Category Dialog modal containing all editable category parameters (Name, Gender, Status, Age/Weight limits, Capacity, and Format).
-
-### D. Auto-Walkovers, Bye Propagation & Scoring List Exclusion
-
-* **[mockStore.ts](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/db/mockStore.ts)**:
-  * Embedded a recursive walkover resolution loop in `generateDraw`. If any fighter has no opponent (a bye), they win by walkover, and their name is automatically pushed to the next round bout.
-  * Replaced the single-step winner advancement logic in `updateBoutResult` with the recursive propagation loop to handle cascading walkovers dynamically.
-* **[dbClient.ts](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/db/dbClient.ts)**:
-  * Implemented the identical walkover propagation loop inside `updateBoutResult` (Supabase branch) to dynamically update match statuses in database tables.
-* **[draws.test.ts](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/db/draws.test.ts)**:
-  * Added a dedicated unit test case validating cascading walkover resolution for 5 participants (slots = 8).
-* **[categories/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/categories/page.tsx)**:
-  * Excluded bouts with `status === 'Walkover'` from the Match Console Hub picker to prevent them from showing up for scoring.
-* **[bouts/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/bouts/page.tsx)**:
-  * Excluded bouts with `status === 'Walkover'` from the main Scoring Management control lists.
-* **[dashboard/scoreboard/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/dashboard/scoreboard/page.tsx)**:
-  * Excluded bouts with `status === 'Walkover'` from the dashboard Match Console Hub list picker.
-
-### E. Next.js 404 Routing Fix
-
-* **[control/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/dashboard/control/page.tsx)**:
-  * Removed manual `basePath` prepending from `router.push()` routes. Next.js App Router client-side navigation handles base path prepends automatically, and manual prefixing caused 404 pages in production.
-* **[categories/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/categories/page.tsx)**:
-  * Removed manual `basePath` prefixing on Console Hub match selection redirect.
-
-### F. WKF Category Completion State Fixes
-
-* **[categories/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/categories/page.tsx)**:
-  * Updated `getCategoryBracketStatus` to treat `Walkover` bouts as resolved. This ensures that categories with bye/walkover matches are correctly marked as "completed" in Category Management when all actual bouts finish.
-* **[draws/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/draws/page.tsx)**:
-  * Updated `getCategoryBracketStatus` to recognize `Walkover` status for category completion.
-* **[SportdataBracket.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/components/SportdataBracket.tsx)**:
-  * Updated the match list completion indicator, final standings calculation, and champion player display check to treat `Walkover` bouts as completed/resolved.
-* **[page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/page.tsx)**, **[reports/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/reports/page.tsx)**, **[public/page.tsx](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/src/app/public/page.tsx)**:
-  * Included `Walkover` bouts in recently completed and statistics calculations.
+### B. Hostinger 404 Routing Fix
+* **[next.config.ts](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/next.config.ts)**: Uses `NEXT_PUBLIC_BASE_PATH` env variable to define the base path.
+* **[build-hostinger.js](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/build-hostinger.js)**: Created a new dedicated build script that sets `NEXT_PUBLIC_BASE_PATH=''` (empty string). This builds the application with root-relative paths (`/_next/static/...`), matching root-level custom domain hosting (e.g. `https://darkseagreen-manatee-236634.hostingersite.com/`).
+* **[package.json](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%20Karate/package.json)**: Added the script command `"build:hostinger": "node build-hostinger.js"`.
+* **dist.zip**: Automatically compressed the generated Hostinger-optimized `out/` folder containing the compiled HTML, CSS, JavaScript, and `.htaccess` assets.
 
 ---
 
-## 2. Validation & Testing
+## 2. Deployment Instructions for Hostinger
 
-### Automated Test Coverage
-All **48 tests** (including those verifying the new draws, scoreboard technique history, and cascading walkovers) have passed successfully:
-* Correct auto-walkover status and winner assignment when generating a draw containing byes.
-* Correct cascading propagation of winners into Round 2 and Round 3.
-* JSON parsing vs legacy comma-separated lists fallback logic.
-* Technique events insertion and correct subtraction on Undo actions.
-* Round Robin ranking calculation and sorting under WKF tie-breaking rules.
+To deploy the fixed root-relative website to Hostinger:
 
-### Manual Verification
-* Static HTML/JS production build compiled with Turbopack successfully (`npm run build`).
+1. Locate the **[dist.zip](file:///c:/Users/svana/Kelab%20Senshi%20Goju-Ryu%2520Karate/dist.zip)** file in the root of your project directory.
+2. Log in to your Hostinger Control Panel (hPanel).
+3. Open the **File Manager** for `darkseagreen-manatee-236634.hostingersite.com`.
+4. Go to the `public_html/` folder.
+5. Upload the **`dist.zip`** file.
+6. Right-click the uploaded **`dist.zip`** file and select **Extract** to unpack all the files directly into the `public_html/` directory.
+7. Verify that files like `index.html`, `settings/`, `_next/`, and `.htaccess` are directly under `public_html/` (not inside an `out` subdirectory).
+
+Once extracted, direct paths and page refreshes will resolve correctly without any 404 errors!
