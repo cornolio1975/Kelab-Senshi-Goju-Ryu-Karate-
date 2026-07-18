@@ -2,4 +2,4 @@
 2:I[39756,["/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/14mrh2-p_w84d.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/3l3ks1__p1z8n.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/271dbhuhs9n-2.js"],"default"]
 3:I[37457,["/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/14mrh2-p_w84d.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/3l3ks1__p1z8n.js","/Kelab-Senshi-Goju-Ryu-Karate-/_next/static/chunks/271dbhuhs9n-2.js"],"default"]
 4:[]
-0:{"rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"isPartial":false,"staleTime":300,"varyParams":"$W4","buildId":"vAzugk74YE5VV6TYfnTU0"}
+0:{"rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"isPartial":false,"staleTime":300,"varyParams":"$W4","buildId":"-6fW3mDqf1tzdlTklfIr-"}
