@@ -1,6 +1,31 @@
-# Options -MultiViews
+# Enable mod_rewrite
+Options -MultiViews
 RewriteEngine On
 
+# ─── MIME Types & Charset (required for Safari / Edge) ───────────────────────
+AddType application/javascript .js
+AddType text/css .css
+AddType application/json .json
+AddCharset UTF-8 .js .css .html .json .svg .txt
+
+# Force correct Content-Type for JS module chunks
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js)$">
+    Header set Content-Type "application/javascript; charset=UTF-8"
+  </FilesMatch>
+  <FilesMatch "\.(css)$">
+    Header set Content-Type "text/css; charset=UTF-8"
+  </FilesMatch>
+  # Prevent caching of HTML (always serve fresh)
+  <FilesMatch "\.(html)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+    Header set Content-Type "text/html; charset=UTF-8"
+  </FilesMatch>
+  # Allow cross-origin fonts/scripts (needed by Safari strict mode)
+  Header always set Access-Control-Allow-Origin "*"
+</IfModule>
+
+# ─── Routing Rules ───────────────────────────────────────────────────────────
 # Serve existing files directly
 RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
@@ -13,5 +38,5 @@ RewriteRule ^ - [L]
 RewriteCond %{REQUEST_FILENAME}/index.html -f
 RewriteRule ^(.*?)/?$ /$1/index.html [L]
 
-# Fallback: serve root index.html for unknown routes
+# Fallback: serve root index.html for unknown routes (SPA routing)
 RewriteRule ^ /index.html [L]
