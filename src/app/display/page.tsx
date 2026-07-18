@@ -9,8 +9,16 @@ import { useTournament } from '@/context/TournamentContext';
 
 function SpectatorDisplayContent() {
   const searchParams = useSearchParams();
-  const boutId = searchParams.get('boutId');
+  const urlBoutId = searchParams.get('boutId');
+  const [activeBoutId, setActiveBoutId] = useState<string | null>(null);
   const { tournamentName } = useTournament();
+
+  // Sync activeBoutId with URL query params initially or when they change
+  useEffect(() => {
+    if (urlBoutId) {
+      setActiveBoutId(urlBoutId);
+    }
+  }, [urlBoutId]);
 
   const [mounted, setMounted] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -218,8 +226,23 @@ function SpectatorDisplayContent() {
       const key = isStream ? 'ts_show_point_history_stream' : 'ts_show_point_history_public';
       setShowPointHistory(searchParams.get('history') === 'true' || localStorage.getItem(key) === 'true');
 
+      // Send initial connect notification
+      channel.postMessage({ type: 'SPECTATOR_CONNECTED' });
+
+      const handleUnload = () => {
+        channel.postMessage({ type: 'SPECTATOR_DISCONNECTED' });
+      };
+      window.addEventListener('beforeunload', handleUnload);
+
       channel.onmessage = (event) => {
         const data = event.data;
+
+        // Respond to heartbeat pings from the controller
+        if (data.type === 'PING') {
+          channel.postMessage({ type: 'PONG' });
+          return;
+        }
+
         if (data.type === 'MATCH_FINISHED') {
           setWinnerSide(data.winnerSide);
           setWinMethod('Completed');
@@ -227,7 +250,11 @@ function SpectatorDisplayContent() {
           return;
         }
 
-        if (data.boutId === boutId) {
+        if (data.boutId) {
+          // If the controller shifted to a new match, update our active target boutId
+          if (data.boutId !== activeBoutId) {
+            setActiveBoutId(data.boutId);
+          }
           setAkaName(data.akaName);
           setAkaClub(data.akaClub);
           setAoName(data.aoName);
@@ -252,16 +279,18 @@ function SpectatorDisplayContent() {
           setWinMethod(data.winMethod);
         }
       };
-    }
 
-    return () => {
-      broadcastChannelRef.current?.close();
-    };
-  }, [boutId, searchParams]);
+      return () => {
+        window.removeEventListener('beforeunload', handleUnload);
+        channel.postMessage({ type: 'SPECTATOR_DISCONNECTED' });
+        channel.close();
+      };
+    }
+  }, [activeBoutId, searchParams]);
 
   // Initial load from Database client
   useEffect(() => {
-    if (!mounted || !boutId) return;
+    if (!mounted || !activeBoutId) return;
 
     const fetchBout = async () => {
       try {
@@ -272,7 +301,7 @@ function SpectatorDisplayContent() {
           db.categories.list()
         ]);
 
-        const bout = boutsList.find(b => b.id === boutId);
+        const bout = boutsList.find(b => b.id === activeBoutId);
         if (bout) {
           const compAka = partsList.find(p => p.id === bout.participant_a_id);
           const compAo = partsList.find(p => p.id === bout.participant_b_id);
@@ -352,15 +381,15 @@ function SpectatorDisplayContent() {
     };
 
     fetchBout();
-  }, [mounted, boutId]);
+  }, [mounted, activeBoutId]);
 
   // Supabase Realtime fallback subscription
   useEffect(() => {
-    if (!supabase || !boutId) return;
+    if (!supabase || !activeBoutId) return;
 
     const channel = supabase
-      .channel(`display-bout-${boutId}`)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bouts', filter: `id=eq.${boutId}` },
+      .channel(`display-bout-${activeBoutId}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'bouts', filter: `id=eq.${activeBoutId}` },
         async (payload: any) => {
           const updated = payload.new;
           if (updated) {
@@ -385,7 +414,7 @@ function SpectatorDisplayContent() {
                   points: pts,
                   technique: pts === 1 ? 'Yuko' : pts === 2 ? 'Waza-ari' : pts === 3 ? 'Ippon' : 'Point',
                   timestamp: 0,
-                  matchId: boutId!
+                  matchId: activeBoutId!
                 }));
               }
             }
@@ -404,7 +433,7 @@ function SpectatorDisplayContent() {
                   points: pts,
                   technique: pts === 1 ? 'Yuko' : pts === 2 ? 'Waza-ari' : pts === 3 ? 'Ippon' : 'Point',
                   timestamp: 0,
-                  matchId: boutId!
+                  matchId: activeBoutId!
                 }));
               }
             }
@@ -433,7 +462,7 @@ function SpectatorDisplayContent() {
     return () => {
       supabase?.removeChannel(channel);
     };
-  }, [boutId]);
+  }, [activeBoutId]);
 
   // Clock Countdown interval (for displays running timer locally)
   useEffect(() => {

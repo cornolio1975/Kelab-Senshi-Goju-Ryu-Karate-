@@ -7,7 +7,7 @@ import { db, basePath } from '@/db/dbClient';
 import { Bout, Participant } from '@/db/types';
 import {
   Zap, Play, Square, RotateCcw, X, Award, Timer,
-  ChevronLeft, Volume2, VolumeX, RefreshCw, Undo, Save, Check, Award as MedalIcon
+  ChevronLeft, Volume2, VolumeX, RefreshCw, Undo, Save, Check, Award as MedalIcon, Tv
 } from 'lucide-react';
 import { useTournament } from '@/context/TournamentContext';
 
@@ -64,22 +64,97 @@ export default function ScoreboardControlPage() {
   const [winMethod, setWinMethod] = useState<string>('Points');
   const [saving, setSaving] = useState<boolean>(false);
 
+  // Spectator View launch & management states
+  const [spectatorConnected, setSpectatorConnected] = useState<boolean>(false);
+  const [popupBlocked, setPopupBlocked] = useState<boolean>(false);
+  const [isSpectatorModalOpen, setIsSpectatorModalOpen] = useState<boolean>(false);
+  const lastSpectatorHeartbeat = useRef<number>(0);
+  const spectatorWindowRef = useRef<Window | null>(null);
+
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const soundPlayedRef = useRef<string | null>(null);
 
-  // Setup broadcast channel
+  // Open Spectator Window helper
+  const openSpectatorWindow = useCallback((mode: 'default' | 'new-tab' | 'new-window' = 'default') => {
+    if (typeof window === 'undefined') return;
+    const specUrl = `${window.location.origin}${basePath}/display?boutId=${boutId}`;
+    let specWindow: Window | null = null;
+    
+    if (mode === 'default') {
+      specWindow = window.open(specUrl, 'KarateTechSpectator');
+    } else if (mode === 'new-tab') {
+      specWindow = window.open(specUrl, '_blank');
+    } else if (mode === 'new-window') {
+      specWindow = window.open(specUrl, '_blank', 'width=1200,height=800,menubar=no,status=no');
+    }
+    
+    spectatorWindowRef.current = specWindow;
+    
+    if (!specWindow || specWindow.closed || typeof specWindow.closed === 'undefined') {
+      setPopupBlocked(true);
+    } else {
+      setPopupBlocked(false);
+      try {
+        specWindow.focus();
+      } catch (e) {
+        console.warn('Could not focus spectator window:', e);
+      }
+    }
+  }, [boutId]);
+
+  // Setup broadcast channel & heartbeat checks
   useEffect(() => {
     setMounted(true);
+    let channel: BroadcastChannel | null = null;
+
     if (typeof window !== 'undefined') {
-      broadcastChannelRef.current = new BroadcastChannel('wkf-scoreboard-sync');
+      channel = new BroadcastChannel('wkf-scoreboard-sync');
+      broadcastChannelRef.current = channel;
       const urlHistory = new URLSearchParams(window.location.search).get('history') === 'true';
       setShowPointHistory(urlHistory || localStorage.getItem('ts_show_point_history_referee') === 'true');
+
+      // Send initial handshake ping
+      channel.postMessage({ type: 'PING' });
+
+      // Handle message events
+      channel.onmessage = (event) => {
+        const data = event.data;
+        if (data.type === 'PONG' || data.type === 'SPECTATOR_CONNECTED') {
+          lastSpectatorHeartbeat.current = Date.now();
+          setSpectatorConnected(true);
+        } else if (data.type === 'SPECTATOR_DISCONNECTED') {
+          setSpectatorConnected(false);
+        }
+      };
     }
+
+    // Ping interval to maintain keep-alive
+    const pingInterval = setInterval(() => {
+      broadcastChannelRef.current?.postMessage({ type: 'PING' });
+    }, 1000);
+
+    // Timeout checking connection health
+    const healthInterval = setInterval(() => {
+      if (lastSpectatorHeartbeat.current > 0 && Date.now() - lastSpectatorHeartbeat.current > 2500) {
+        setSpectatorConnected(false);
+      }
+    }, 1000);
+
+    // Auto-launch spectator window after 500ms if no connection is established
+    const autoOpenTimeout = setTimeout(() => {
+      if (lastSpectatorHeartbeat.current === 0) {
+        openSpectatorWindow('default');
+      }
+    }, 500);
+
     return () => {
-      broadcastChannelRef.current?.close();
+      clearInterval(pingInterval);
+      clearInterval(healthInterval);
+      clearTimeout(autoOpenTimeout);
+      channel?.close();
     };
-  }, []);
+  }, [openSpectatorWindow]);
 
   // Trigger Superior Points fanfare when winner is determined by superior points
   useEffect(() => {
@@ -957,6 +1032,18 @@ export default function ScoreboardControlPage() {
     }
   };
 
+  const handleSpectatorIndicatorClick = () => {
+    openSpectatorWindow('default');
+  };
+
+  const handleSpectatorButtonClick = () => {
+    if (spectatorConnected) {
+      setIsSpectatorModalOpen(true);
+    } else {
+      openSpectatorWindow('default');
+    }
+  };
+
   if (!mounted || loading) {
     return (
       <div className="min-h-screen bg-[#0b0b10] flex items-center justify-center">
@@ -992,6 +1079,29 @@ export default function ScoreboardControlPage() {
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {/* Status Indicator */}
+          <button
+            onClick={handleSpectatorIndicatorClick}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition border cursor-pointer ${
+              spectatorConnected 
+                ? 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border-emerald-500/20' 
+                : 'bg-red-500/10 hover:bg-red-500/20 text-red-400 border-red-500/20'
+            }`}
+            title={spectatorConnected ? "Focus existing spectator view" : "Launch spectator view"}
+          >
+            <span className={`w-2 h-2 rounded-full ${spectatorConnected ? 'bg-emerald-400 animate-pulse' : 'bg-red-500'}`} />
+            <span>{spectatorConnected ? 'Spectator Connected' : 'Spectator Closed'}</span>
+          </button>
+
+          {/* Spectator View button */}
+          <button
+            onClick={handleSpectatorButtonClick}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-500 hover:bg-yellow-400 text-black rounded-lg text-xs font-bold transition cursor-pointer"
+          >
+            <Tv className="h-3.5 w-3.5" />
+            <span>Spectator View</span>
+          </button>
+
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
             className="p-2 hover:bg-white/5 rounded-lg transition"
@@ -1007,6 +1117,22 @@ export default function ScoreboardControlPage() {
           </button>
         </div>
       </header>
+
+      {/* Popup Blocked Warning */}
+      {popupBlocked && (
+        <div className="bg-amber-500 text-black px-6 py-2.5 flex items-center justify-between text-xs font-bold shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm">⚠️</span>
+            <span>Please allow pop-ups to automatically open the Spectator View on this device.</span>
+          </div>
+          <button
+            onClick={() => openSpectatorWindow('default')}
+            className="px-3 py-1 bg-black text-white hover:bg-black/90 rounded-md text-[10px] uppercase tracking-wider font-black transition cursor-pointer"
+          >
+            Open Spectator View
+          </button>
+        </div>
+      )}
 
       {/* Winning Decision Banner */}
       {winnerSide && (
@@ -1507,6 +1633,65 @@ export default function ScoreboardControlPage() {
                     <Check className="h-4 w-4" /> Confirm & Save
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Spectator View Management Modal */}
+      {isSpectatorModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+          <div className="bg-[#121218] border border-white/10 rounded-2xl max-w-sm w-full p-6 space-y-4 shadow-2xl">
+            <div className="text-center space-y-1.5">
+              <div className="w-12 h-12 bg-yellow-500/10 text-yellow-500 rounded-full flex items-center justify-center mx-auto">
+                <Tv className="h-6 w-6" />
+              </div>
+              <h3 className="text-base font-black uppercase tracking-wider text-white">Spectator View Running</h3>
+              <p className="text-xs text-gray-400 font-medium">
+                Spectator View is already running. Choose an option:
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 pt-2">
+              <button
+                onClick={() => {
+                  openSpectatorWindow('default');
+                  setIsSpectatorModalOpen(false);
+                }}
+                className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-xs font-bold transition text-left px-4 flex items-center justify-between cursor-pointer"
+              >
+                <span>Focus Existing Window</span>
+                <span className="text-[10px] text-gray-500 font-semibold">Reuses active tab</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  openSpectatorWindow('new-tab');
+                  setIsSpectatorModalOpen(false);
+                }}
+                className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-xs font-bold transition text-left px-4 flex items-center justify-between cursor-pointer"
+              >
+                <span>Open New Tab</span>
+                <span className="text-[10px] text-gray-500 font-semibold">Creates another tab</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  openSpectatorWindow('new-window');
+                  setIsSpectatorModalOpen(false);
+                }}
+                className="w-full py-3 bg-white/5 hover:bg-white/10 border border-white/10 text-white rounded-xl text-xs font-bold transition text-left px-4 flex items-center justify-between cursor-pointer"
+              >
+                <span>Open New Browser Window</span>
+                <span className="text-[10px] text-gray-500 font-semibold">For dual screens</span>
+              </button>
+
+              <button
+                onClick={() => setIsSpectatorModalOpen(false)}
+                className="w-full py-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 rounded-xl text-xs font-bold transition text-center mt-2 cursor-pointer"
+              >
+                Cancel
               </button>
             </div>
           </div>
