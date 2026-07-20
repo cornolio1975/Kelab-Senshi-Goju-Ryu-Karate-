@@ -4,7 +4,7 @@
  */
 
 import { generateBrackets, getBracketStats, Bracket } from '@/lib/bracketGenerator';
-import { parseCSV, athletesToCSV, exportBracketResults, downloadCSV } from '@/lib/csvUtils';
+import { parseCSV, exportBracketResults } from '@/lib/csvUtils';
 import { SAMPLE_ROSTER } from '@/lib/sampleRoster';
 import { BRACKET_CONFIG } from '@/lib/bracketConfig';
 import { Athlete } from '@/lib/bracketGenerator';

@@ -755,14 +755,17 @@ export default function ScoringPage() {
                   {scoreAka}
                 </span>
                 {showPointHistory && eventsAka.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1 justify-end max-w-[300px]">
+                  <div className="flex items-center flex-wrap gap-y-1 mt-1 justify-end overflow-x-auto max-w-[340px]">
                     {eventsAka.map((ev, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-0.5 rounded-sm bg-red-950/80 border border-red-500/30 text-[9px] font-black text-red-400 whitespace-nowrap"
-                      >
-                        +{ev.points} {ev.technique}
-                      </span>
+                      <div key={idx} className="flex items-center">
+                        {idx > 0 && (
+                          <span className="text-white/25 text-[9px] font-bold mx-1 select-none">→</span>
+                        )}
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-red-950/80 border border-red-500/30 whitespace-nowrap">
+                          <span className="text-[9px] font-black text-red-400">{ev.technique}</span>
+                          <span className="text-[7px] font-bold text-red-600/70">({idx + 1})</span>
+                        </span>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -848,14 +851,17 @@ export default function ScoringPage() {
                   {scoreAo}
                 </span>
                 {showPointHistory && eventsAo.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1 justify-end max-w-[300px]">
+                  <div className="flex items-center flex-wrap gap-y-1 mt-1 justify-end overflow-x-auto max-w-[340px]">
                     {eventsAo.map((ev, idx) => (
-                      <span
-                        key={idx}
-                        className="px-2 py-0.5 rounded-sm bg-blue-950/80 border border-blue-500/30 text-[9px] font-black text-blue-400 whitespace-nowrap"
-                      >
-                        +{ev.points} {ev.technique}
-                      </span>
+                      <div key={idx} className="flex items-center">
+                        {idx > 0 && (
+                          <span className="text-white/25 text-[9px] font-bold mx-1 select-none">→</span>
+                        )}
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-950/80 border border-blue-500/30 whitespace-nowrap">
+                          <span className="text-[9px] font-black text-blue-400">{ev.technique}</span>
+                          <span className="text-[7px] font-bold text-blue-600/70">({idx + 1})</span>
+                        </span>
+                      </div>
                     ))}
                   </div>
                 )}

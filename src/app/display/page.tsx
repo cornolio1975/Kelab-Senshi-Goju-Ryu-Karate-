@@ -593,14 +593,17 @@ function SpectatorDisplayContent() {
               {scoreAka}
             </span>
             {showPointHistory && eventsAka.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2 justify-center max-w-[90%]">
+              <div className="flex items-center flex-wrap gap-y-1.5 mt-2 justify-center overflow-x-auto max-w-[90%]">
                 {eventsAka.map((ev, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2.5 py-0.5 rounded bg-red-950/80 border border-red-500/30 text-[10px] font-black text-red-400 uppercase tracking-wider"
-                  >
-                    +{ev.points} {ev.technique}
-                  </span>
+                  <div key={idx} className="flex items-center">
+                    {idx > 0 && (
+                      <span className="text-white/20 text-[10px] font-bold mx-1.5 select-none">→</span>
+                    )}
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-red-950/80 border border-red-500/30 whitespace-nowrap">
+                      <span className="text-[10px] font-black text-red-400 uppercase tracking-wider">{ev.technique}</span>
+                      <span className="text-[8px] font-bold text-red-600/70">({idx + 1})</span>
+                    </span>
+                  </div>
                 ))}
               </div>
             )}
@@ -712,14 +715,17 @@ function SpectatorDisplayContent() {
               {scoreAo}
             </span>
             {showPointHistory && eventsAo.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-2 justify-center max-w-[90%]">
+              <div className="flex items-center flex-wrap gap-y-1.5 mt-2 justify-center overflow-x-auto max-w-[90%]">
                 {eventsAo.map((ev, idx) => (
-                  <span
-                    key={idx}
-                    className="px-2.5 py-0.5 rounded bg-blue-950/80 border border-blue-500/30 text-[10px] font-black text-blue-400 uppercase tracking-wider"
-                  >
-                    +{ev.points} {ev.technique}
-                  </span>
+                  <div key={idx} className="flex items-center">
+                    {idx > 0 && (
+                      <span className="text-white/20 text-[10px] font-bold mx-1.5 select-none">→</span>
+                    )}
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-blue-950/80 border border-blue-500/30 whitespace-nowrap">
+                      <span className="text-[10px] font-black text-blue-400 uppercase tracking-wider">{ev.technique}</span>
+                      <span className="text-[8px] font-bold text-blue-600/70">({idx + 1})</span>
+                    </span>
+                  </div>
                 ))}
               </div>
             )}

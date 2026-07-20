@@ -5,7 +5,6 @@ import { Athlete } from './bracketGenerator';
  */
 export function parseCSV(csvContent: string): Athlete[] {
   const lines = csvContent.trim().split('\n');
-  const headers = lines[0].split(',').map((h) => h.trim());
 
   const athletes: Athlete[] = [];
 

@@ -445,33 +445,43 @@ const SEED_KEYS = [
 
 function initSeedStore() {
   if (!isClient()) return;
-  const storedVersion = localStorage.getItem(SEED_VERSION_KEY);
-  if (storedVersion !== SEED_VERSION) {
-    // Clear all cached seed data so getStoreData() re-seeds from SEED_* arrays
-    SEED_KEYS.forEach(k => localStorage.removeItem(k));
-    localStorage.setItem(SEED_VERSION_KEY, SEED_VERSION);
-    console.info('[mockStore] Seed version changed → cache cleared and re-seeded.');
+  try {
+    const storedVersion = localStorage.getItem(SEED_VERSION_KEY);
+    if (storedVersion !== SEED_VERSION) {
+      // Clear all cached seed data so getStoreData() re-seeds from SEED_* arrays
+      SEED_KEYS.forEach(k => localStorage.removeItem(k));
+      localStorage.setItem(SEED_VERSION_KEY, SEED_VERSION);
+      console.info('[mockStore] Seed version changed → cache cleared and re-seeded.');
+    }
+  } catch (e) {
+    console.warn('[mockStore] localStorage not available (Safari Private Browsing?)', e);
   }
 }
-initSeedStore();
+try { initSeedStore(); } catch (e) { /* Safari Private Browsing / localStorage blocked */ }
 // ────────────────────────────────────────────────────────────────────────────
 
 
 // Fetch a key from localStorage or return default seed data
 function getStoreData<T>(key: string, seed: T[]): T[] {
   if (!isClient()) return seed;
-  const raw = localStorage.getItem(key);
-  if (!raw) {
-    localStorage.setItem(key, JSON.stringify(seed));
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      localStorage.setItem(key, JSON.stringify(seed));
+      return seed;
+    }
+    return JSON.parse(raw);
+  } catch (e) {
     return seed;
   }
-  return JSON.parse(raw);
 }
 
 // Write a key to localStorage
 function saveStoreData<T>(key: string, data: T[]) {
   if (isClient()) {
-    localStorage.setItem(key, JSON.stringify(data));
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (e) { /* Safari Private Browsing */ }
   }
 }
 
@@ -747,7 +757,7 @@ export const mockStore = {
       mockStore.participants.autoAssignCategory(newParticipant);
 
       // Create Audit Log
-      mockStore.audit.log('System', 'INSERT', 'participants', id, null, newParticipant);
+      mockStore.audit.log('System', 'INSERT', 'participants', id, null, { ...newParticipant } as Record<string, unknown>);
       mockStore.activityLogs.log(id, 'System', 'Registration Created', `Participant ${participant.full_name} registered successfully`);
 
       return newParticipant;
@@ -783,12 +793,12 @@ export const mockStore = {
       if (updates.payment_status) {
         const pays = mockStore.payments.list().filter(p => p.participant_id === id);
         if (pays.length > 0) {
-          mockStore.payments.update(pays[0].id, { status: updates.payment_status as any });
+          mockStore.payments.update(pays[0].id, { status: updates.payment_status as Payment['status'] });
         }
       }
 
       // Audit and activity logging
-      mockStore.audit.log(operator, 'UPDATE', 'participants', id, original, updated);
+      mockStore.audit.log(operator, 'UPDATE', 'participants', id, { ...original } as Record<string, unknown>, { ...updated } as Record<string, unknown>);
       
       const changeDesc: string[] = [];
       if (updates.status && updates.status !== original.status) changeDesc.push(`status changed from ${original.status} to ${updates.status}`);
@@ -815,7 +825,7 @@ export const mockStore = {
       saveStoreData('ts_participants', list);
 
       // Log activity and audit
-      mockStore.audit.log(operator, 'DELETE', 'participants', id, original, null);
+      mockStore.audit.log(operator, 'DELETE', 'participants', id, { ...original } as Record<string, unknown>, null);
       mockStore.activityLogs.log(id, operator, 'Soft Deleted', 'Participant soft-deleted from active list');
     },
     restore: (id: string, operator = 'Admin'): Participant => {
@@ -827,7 +837,7 @@ export const mockStore = {
       list[idx].deleted_at = undefined;
       saveStoreData('ts_participants', list);
 
-      mockStore.audit.log(operator, 'INSERT', 'participants', id, original, list[idx]);
+      mockStore.audit.log(operator, 'INSERT', 'participants', id, { ...original } as Record<string, unknown>, { ...list[idx] } as Record<string, unknown>);
       mockStore.activityLogs.log(id, operator, 'Restored', 'Participant restored from bin');
 
       return list[idx];
@@ -903,7 +913,7 @@ export const mockStore = {
         id: `pay-${Date.now()}`,
         participant_id: participantId,
         amount: pay.amount || 150.00,
-        status: (pay.status as any) || 'Unpaid',
+        status: pay.status ?? 'Unpaid',
         payment_method: pay.payment_method,
         transaction_id: pay.transaction_id,
         created_at: new Date().toISOString()
@@ -1014,7 +1024,7 @@ export const mockStore = {
         return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
       });
     },
-    log: (operator: string, action: 'INSERT' | 'UPDATE' | 'DELETE', table: string, recordId: string, oldVal: any, newVal: any): AuditLog => {
+    log: (operator: string, action: 'INSERT' | 'UPDATE' | 'DELETE', table: string, recordId: string, oldVal: Record<string, unknown> | null, newVal: Record<string, unknown> | null): AuditLog => {
       const list = getStoreData<AuditLog>('ts_audit_logs', []);
       const newLog: AuditLog = {
         id: `aud-${Date.now()}`,

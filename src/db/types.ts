@@ -132,8 +132,8 @@ export interface AuditLog {
   action: 'INSERT' | 'UPDATE' | 'DELETE';
   table_name: string;
   record_id: string;
-  old_values?: any;
-  new_values?: any;
+  old_values?: Record<string, unknown> | null;
+  new_values?: Record<string, unknown> | null;
   created_at?: string;
 }
 

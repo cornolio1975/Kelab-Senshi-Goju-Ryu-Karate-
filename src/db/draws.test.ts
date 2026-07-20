@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 
 // Mock window and localStorage globally BEFORE importing mockStore.
 const store: Record<string, string> = {};
-globalThis.window = {} as any;
+globalThis.window = {} as Window & typeof globalThis;
 globalThis.localStorage = {
   getItem: (key: string) => store[key] || null,
   setItem: (key: string, value: string) => { store[key] = value; },
@@ -14,7 +14,7 @@ globalThis.localStorage = {
   },
   length: 0,
   key: (index: number) => null,
-} as any;
+} as Storage;
 
 // Now import mockStore and types
 import { mockStore } from './mockStore';

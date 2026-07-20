@@ -4,7 +4,7 @@ import LayoutShell from "@/components/LayoutShell";
 
 export const metadata: Metadata = {
   title: "Karate Tech",
-  description: "SP SportData Solution – Professional Karate Tournament Management System",
+  description: "SP SportData Solution - Professional Karate Tournament Management System",
 };
 
 export default function RootLayout({

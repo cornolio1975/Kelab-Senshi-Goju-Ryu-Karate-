@@ -11,6 +11,18 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
 export const isSupabaseConfigured = !!(supabaseUrl && supabaseAnonKey);
 
+const describeError = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return JSON.stringify(error);
+};
+
+const toAuditRecord = (value: unknown): Record<string, unknown> | null => {
+  if (value == null) return null;
+  if (typeof value === 'object') return value as Record<string, unknown>;
+  return { value };
+};
+
 export let supabase: SupabaseClient | null = null;
 if (isSupabaseConfigured) {
   try {
@@ -355,7 +367,7 @@ export const db = {
         };
 
         let data: Participant | null = null;
-        let lastError: any = null;
+        let lastError: Error | null = null;
         for (let attempt = 0; attempt < 5; attempt++) {
           const regNo = generateRegNo();
           const { data: insertData, error } = await supabase
@@ -369,7 +381,7 @@ export const db = {
           }
           // Only retry on unique constraint violations
           if (error.code === '23505' && error.message.includes('registration_no')) {
-            lastError = error;
+            lastError = error as Error;
             await new Promise(r => setTimeout(r, 50 * (attempt + 1)));
             continue;
           }
@@ -407,7 +419,7 @@ export const db = {
         }
 
         await db.activityLogs.log(id, operator, 'Details Edited', 'Personal details updated');
-        await db.audit.log(operator, 'UPDATE', 'participants', id, original, p);
+        await db.audit.log(operator, 'UPDATE', 'participants', id, toAuditRecord(original), toAuditRecord(p));
         return p;
       }
       return mockStore.participants.update(id, updates, operator);
@@ -422,7 +434,7 @@ export const db = {
         if (error) throw error;
 
         await db.activityLogs.log(id, operator, 'Soft Deleted', 'Participant soft-deleted from active list');
-        await db.audit.log(operator, 'DELETE', 'participants', id, original, null);
+        await db.audit.log(operator, 'DELETE', 'participants', id, toAuditRecord(original), null);
         return;
       }
       return mockStore.participants.delete(id, operator);
@@ -466,7 +478,7 @@ export const db = {
         if (error) throw error;
 
         await db.activityLogs.log(id, operator, 'Restored', 'Participant restored from bin');
-        await db.audit.log(operator, 'INSERT', 'participants', id, null, data);
+        await db.audit.log(operator, 'INSERT', 'participants', id, null, toAuditRecord(data));
         return data;
       }
       return mockStore.participants.restore(id, operator);
@@ -670,7 +682,7 @@ export const db = {
       }
       return mockStore.audit.list();
     },
-    log: async (operator: string, action: 'INSERT' | 'UPDATE' | 'DELETE', tableName: string, recordId: string, oldValues: any, newValues: any): Promise<AuditLog> => {
+    log: async (operator: string, action: 'INSERT' | 'UPDATE' | 'DELETE', tableName: string, recordId: string, oldValues: Record<string, unknown> | null, newValues: Record<string, unknown> | null): Promise<AuditLog> => {
       if (supabase) {
         const { data, error } = await supabase
           .from('audit_logs')
@@ -772,8 +784,8 @@ export const db = {
             localStorage.setItem('ts_bouts', JSON.stringify(allDbBouts));
           }
           return saved;
-        } catch (e: any) {
-          console.warn('Supabase repechage error:', e.message || e);
+        } catch (e: unknown) {
+          console.warn('Supabase repechage error:', describeError(e));
         }
       }
       return mockStore.bouts.generateRepechage(catId);
@@ -869,8 +881,8 @@ export const db = {
 
           if (error) throw error;
           return data;
-        } catch (e: any) {
-          console.warn('Supabase bouts table update result error, falling back to mockStore:', e.message || e);
+        } catch (e: unknown) {
+          console.warn('Supabase bouts table update result error, falling back to mockStore:', describeError(e));
         }
       }
       return mockStore.bouts.updateBoutResult(boutId, winnerId, scoreA, scoreB);
@@ -911,8 +923,8 @@ export const db = {
             }
           }
           return updatedBout;
-        } catch (e: any) {
-          console.warn('Supabase bouts table update error, falling back to mockStore:', e.message || e);
+        } catch (e: unknown) {
+          console.warn('Supabase bouts table update error, falling back to mockStore:', describeError(e));
         }
       }
       return mockStore.bouts.updateBoutState(id, updates);
@@ -973,8 +985,8 @@ export const db = {
 
           if (error) throw error;
           return data;
-        } catch (e: any) {
-          console.warn('Supabase bouts table reset error, falling back to mockStore:', e.message || e);
+        } catch (e: unknown) {
+          console.warn('Supabase bouts table reset error, falling back to mockStore:', describeError(e));
         }
       }
       return mockStore.bouts.resetBoutResult(boutId, matchDuration);
@@ -1025,8 +1037,8 @@ export const db = {
           const { data, error } = await supabase.from('tournaments').select('*');
           if (error) throw error;
           return data || [];
-        } catch (e: any) {
-          console.warn('Supabase tournaments table list error, falling back to mockStore:', e.message || e);
+        } catch (e: unknown) {
+          console.warn('Supabase tournaments table list error, falling back to mockStore:', describeError(e));
         }
       }
       return mockStore.tournaments.list();
@@ -1037,8 +1049,8 @@ export const db = {
           const { data, error } = await supabase.from('tournaments').insert([tour]).select().single();
           if (error) throw error;
           return data;
-        } catch (e: any) {
-          console.warn('Supabase tournaments table add error, falling back to mockStore:', e.message || e);
+        } catch (e: unknown) {
+          console.warn('Supabase tournaments table add error, falling back to mockStore:', describeError(e));
         }
       }
       return mockStore.tournaments.add(tour);
@@ -1049,8 +1061,8 @@ export const db = {
           const { data, error } = await supabase.from('tournaments').update(updates).eq('id', id).select().single();
           if (error) throw error;
           return data;
-        } catch (e: any) {
-          console.warn('Supabase tournaments table update error, falling back to mockStore:', e.message || e);
+        } catch (e: unknown) {
+          console.warn('Supabase tournaments table update error, falling back to mockStore:', describeError(e));
         }
       }
       return mockStore.tournaments.update(id, updates);
@@ -1061,8 +1073,8 @@ export const db = {
           const { error } = await supabase.from('tournaments').delete().eq('id', id);
           if (error) throw error;
           return;
-        } catch (e: any) {
-          console.warn('Supabase tournaments table delete error, falling back to mockStore:', e.message || e);
+        } catch (e: unknown) {
+          console.warn('Supabase tournaments table delete error, falling back to mockStore:', describeError(e));
         }
       }
       return mockStore.tournaments.delete(id);

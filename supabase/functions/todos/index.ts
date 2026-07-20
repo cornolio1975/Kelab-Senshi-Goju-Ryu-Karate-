@@ -1,6 +1,6 @@
 import { withSupabase } from "npm:@supabase/server@^1"
 
-export default {
+const todosHandler = {
   fetch: withSupabase({ auth: "user" }, async (_req, ctx) => {
     const { data, error } = await ctx.supabase.from("todos").select()
     if (error) {
@@ -9,3 +9,5 @@ export default {
     return Response.json(data)
   }),
 }
+
+export default todosHandler
